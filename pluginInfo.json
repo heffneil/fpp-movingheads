@@ -8,6 +8,7 @@
 	"bugURL": "https://github.com/heffneil/fpp-movingheads/issues",
 	"iconURL": "https://raw.githubusercontent.com/heffneil/fpp-movingheads/master/icon.png",
 	"allowUpdates": 1,
+	"branch": "master",
 	"versions": [
 		{
 			"minFPPVersion": "10.0",
