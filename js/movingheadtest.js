@@ -32,6 +32,7 @@ var MHT = (function () {
     var polar = false;
     var dimmerInput = null;   // held so "Lamp off" can move the control itself
     var shutterInput = null;
+    var R = 144, C = 150;     // radar geometry, in the 300x300 viewBox
 
     function $(id) { return document.getElementById(id); }
 
@@ -55,19 +56,58 @@ var MHT = (function () {
         return v;
     }
 
+    // Never overwrite a field the user is typing into. recompute() runs on every
+    // pointer move, so without this a typed value would be clobbered mid-entry.
+    function setFieldValue(el, v) {
+        if (el && document.activeElement !== el) { el.value = v; }
+    }
+
     function recompute() {
-        var p = applyMotor(fx.pan, panDeg);
-        var t = applyMotor(fx.tilt, tiltDeg);
+        applyMotor(fx.pan, panDeg);
+        applyMotor(fx.tilt, tiltDeg);
         if (fx.pan) {
-            $('mhtPanDeg').textContent = Math.round(panDeg) + '°';
+            setFieldValue($('mhtPanDeg'), Math.round(panDeg));
             $('mhtPanRaw').textContent = 'ch' + fx.pan.coarse + '=' + vals[fx.pan.coarse] +
                 (fx.pan.fine > 0 ? ' ch' + fx.pan.fine + '=' + vals[fx.pan.fine] : '');
         }
         if (fx.tilt) {
-            $('mhtTiltDeg').textContent = Math.round(tiltDeg) + '°';
+            setFieldValue($('mhtTiltDeg'), Math.round(tiltDeg));
             $('mhtTiltRaw').textContent = 'ch' + fx.tilt.coarse + '=' + vals[fx.tilt.coarse] +
                 (fx.tilt.fine > 0 ? ' ch' + fx.tilt.fine + '=' + vals[fx.tilt.fine] : '');
         }
+    }
+
+    function panLimit() { return fx.pan ? Math.min(180, fx.pan.range / 2) : 180; }
+    function tiltLimit() { return fx.tilt ? Math.min(180, fx.tilt.range / 2) : 135; }
+
+    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+    // Single entry point for aiming, so a drag and a typed angle behave
+    // identically: clamp, move the dot, recompute channels, write.
+    function setAim(p, t) {
+        panDeg = clamp(p, -panLimit(), panLimit());
+        tiltDeg = clamp(t, -tiltLimit(), tiltLimit());
+        placeDot();
+        recompute();
+        flush();
+    }
+
+    // Inverse of the pointer mapping: put the dot where the current angles say.
+    function placeDot() {
+        var dx, dy;
+        if (polar) {
+            var a = panDeg * Math.PI / 180;
+            var r = (Math.abs(tiltDeg) / tiltLimit()) * R;
+            dx = Math.sin(a) * r;
+            dy = -Math.cos(a) * r;
+        } else {
+            dx = (panDeg / panLimit()) * R;
+            dy = -(tiltDeg / tiltLimit()) * R;
+        }
+        $('mhtDot').setAttribute('cx', C + dx);
+        $('mhtDot').setAttribute('cy', C + dy);
+        $('mhtRay').setAttribute('x2', C + dx);
+        $('mhtRay').setAttribute('y2', C + dy);
     }
 
     /* ---------------------------------------------------------------- Zones */
@@ -219,26 +259,8 @@ var MHT = (function () {
 
     /* ---------------------------------------------------------------- Radar */
 
-    var R = 144, C = 150;
-
-    function radarTo(dx, dy) {
-        var panLimit = fx.pan ? Math.min(180, fx.pan.range / 2) : 180;
-        var tiltLimit = fx.tilt ? Math.min(180, fx.tilt.range / 2) : 135;
-        if (polar) {
-            panDeg = Math.atan2(dx, -dy) * 180 / Math.PI;
-            tiltDeg = (Math.hypot(dx, dy) / R) * tiltLimit;
-        } else {
-            panDeg = (dx / R) * panLimit;
-            tiltDeg = -(dy / R) * tiltLimit;
-        }
-        $('mhtDot').setAttribute('cx', C + dx);
-        $('mhtDot').setAttribute('cy', C + dy);
-        $('mhtRay').setAttribute('x2', C + dx);
-        $('mhtRay').setAttribute('y2', C + dy);
-        recompute();
-        flush();
-    }
-
+    // Pointer position on the pad -> angles, then through the same setAim() a
+    // typed angle uses, so the two input routes cannot drift apart.
     function radarPoint(e) {
         var svg = $('mhtRadar');
         var b = svg.getBoundingClientRect();
@@ -247,29 +269,68 @@ var MHT = (function () {
         var dx = x - C, dy = y - C;
         var d = Math.hypot(dx, dy);
         if (d > R) { dx *= R / d; dy *= R / d; }
-        radarTo(dx, dy);
+        if (polar) {
+            setAim(Math.atan2(dx, -dy) * 180 / Math.PI, (Math.hypot(dx, dy) / R) * tiltLimit());
+        } else {
+            setAim((dx / R) * panLimit(), -(dy / R) * tiltLimit());
+        }
     }
 
-    function centre() {
-        panDeg = 0; tiltDeg = 0;
-        radarTo(0, 0);
-    }
+    function centre() { setAim(0, 0); }
 
     /* -------------------------------------------------------------- Surface */
 
+    /**
+     * Slider plus an editable number, bound both ways. Dragging is fine for
+     * aiming but useless for "set this channel to exactly 137", so the readout
+     * is a real input rather than a label.
+     */
     function row(chAbs, label, value, max, onInput, muted) {
         var d = document.createElement('div');
         d.className = 'mhtRow';
         d.innerHTML = '<span class="mhtCh">' + chAbs + '</span>' +
-            '<label' + (muted ? ' class="mhtMuted"' : '') + '>' + label + '</label>' +
+            '<label title="' + label + '"' + (muted ? ' class="mhtMuted"' : '') + '>' + label + '</label>' +
             '<input type="range" min="0" max="' + max + '" step="1" value="' + value + '">' +
-            '<span class="mhtVal">' + value + '</span>';
-        var inp = d.querySelector('input'), out = d.querySelector('.mhtVal');
-        inp.addEventListener('input', function () {
-            out.textContent = inp.value;
-            onInput(parseInt(inp.value, 10));
-        });
+            '<input type="number" class="mhtVal" min="0" max="' + max + '" step="1" value="' + value + '">';
+        var slider = d.querySelector('input[type=range]');
+        var num = d.querySelector('input[type=number]');
+        bindPair(slider, num, max, onInput);
         return d;
+    }
+
+    /**
+     * Keep a range and a number input in step. The number is only clamped on
+     * blur/Enter, not on every keystroke - clamping mid-entry makes typing
+     * "137" impossible, because "1" would immediately become the minimum.
+     */
+    function bindPair(slider, num, max, onInput) {
+        slider.addEventListener('input', function () {
+            num.value = slider.value;
+            onInput(parseInt(slider.value, 10));
+        });
+        function commit() {
+            var v = parseInt(num.value, 10);
+            if (isNaN(v)) { v = 0; }
+            v = clamp(v, 0, max);
+            num.value = v;
+            slider.value = v;
+            onInput(v);
+        }
+        // 'input' so a typed value takes effect as it is entered, without
+        // clamping; commit() on change/blur tidies it up and fixes the range.
+        num.addEventListener('input', function () {
+            var v = parseInt(num.value, 10);
+            if (isNaN(v)) { return; }
+            if (v < 0 || v > max) { return; }
+            slider.value = v;
+            onInput(v);
+        });
+        num.addEventListener('change', commit);
+        num.addEventListener('blur', commit);
+        num.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { commit(); num.blur(); }
+        });
+        return { slider: slider, num: num };
     }
 
     function buildSurface() {
@@ -294,7 +355,7 @@ var MHT = (function () {
             d.className = 'mhtRow';
             var on = fx.shutter.onValue;
             d.innerHTML = '<span class="mhtCh">' + (base + fx.shutter.channel - 1) + '</span>' +
-                '<label>Shutter</label>';
+                '<label title="Shutter">Shutter</label>';
             if (on !== null && on !== undefined) {
                 var bOpen = document.createElement('button');
                 bOpen.type = 'button'; bOpen.textContent = 'Open';
@@ -314,11 +375,12 @@ var MHT = (function () {
             // and strobe lives at values between closed and open anyway.
             var sl = document.createElement('input');
             sl.type = 'range'; sl.min = 0; sl.max = 255; sl.step = 1; sl.value = 0;
-            var sv = document.createElement('span');
-            sv.className = 'mhtVal'; sv.textContent = '0';
-            sl.addEventListener('input', function () {
-                vals[fx.shutter.channel] = parseInt(sl.value, 10);
-                sv.textContent = sl.value; flush();
+            var sv = document.createElement('input');
+            sv.type = 'number'; sv.className = 'mhtVal';
+            sv.min = 0; sv.max = 255; sv.step = 1; sv.value = 0;
+            bindPair(sl, sv, 255, function (v) {
+                vals[fx.shutter.channel] = v;
+                flush();
             });
             d.appendChild(sl); d.appendChild(sv);
             sem.appendChild(d);
@@ -395,7 +457,7 @@ var MHT = (function () {
         panDeg = 0; tiltDeg = 0;
         buildSurface();
         recompute();
-        radarTo(0, 0);
+        setAim(0, 0);
         $('mhtRange').textContent = base
             ? (base + ' – ' + (base + fx.channelCount - 1))
             : 'no absolute channel - set a controller base';
@@ -445,6 +507,28 @@ var MHT = (function () {
         if (p) {
             p.addEventListener('change', function () { polar = p.checked; centre(); });
         }
+
+        // Typed angles. setAim() clamps to the motor's own range of motion, so
+        // an out-of-range entry lands at the limit rather than being rejected;
+        // recompute() then writes the clamped number back into the field once
+        // focus leaves it.
+        ['mhtPanDeg', 'mhtTiltDeg'].forEach(function (id) {
+            var el = $(id);
+            if (!el) { return; }
+            function apply() {
+                var v = parseFloat(el.value);
+                if (isNaN(v)) { return; }
+                if (id === 'mhtPanDeg') { setAim(v, tiltDeg); } else { setAim(panDeg, v); }
+            }
+            el.addEventListener('input', apply);
+            el.addEventListener('change', function () {
+                apply();
+                el.value = Math.round(id === 'mhtPanDeg' ? panDeg : tiltDeg);
+            });
+            el.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { apply(); el.blur(); }
+            });
+        });
 
         var svg = $('mhtRadar');
         svg.addEventListener('pointerdown', function (e) {
