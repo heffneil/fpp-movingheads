@@ -1,7 +1,7 @@
 /*
  * Deliberately minimal: FPP ships bootstrap and its own light/dark theme, so
- * this only adds layout and inherits colour from the host page. No hardcoded
- * backgrounds or text colours, or the plugin would clash in one of the themes.
+ * this only adds layout and inherits color from the host page. No hardcoded
+ * backgrounds or text colors, or the plugin would clash in one of the themes.
  */
 
 .mhtWrap { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }

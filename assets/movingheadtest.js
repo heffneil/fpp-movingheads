@@ -28,14 +28,14 @@ var MHT = (function () {
     var live = false;
     var dragging = false;
     var panDeg = 0, tiltDeg = 0;
-    var honourZones = true;
+    var honorZones = true;
     var polar = false;
     var dimmerInput = null;   // held so "Lamp off" can move the control itself
     var shutterInput = null;
     var R = 144, C = 150;     // radar geometry, in the 300x300 viewBox
 
     // Password managers latch onto bare number inputs and pop their autofill UI
-    // over a field that is just a DMX value. Each vendor honours its own opt-out;
+    // over a field that is just a DMX value. Each vendor honors its own opt-out;
     // autocomplete="off" alone does not stop 1Password.
     var PM_OPTOUT = 'autocomplete="off" data-1p-ignore data-lpignore="true" ' +
                     'data-bwignore data-form-type="other"';
@@ -44,14 +44,29 @@ var MHT = (function () {
 
     /* ------------------------------------------------------------- Channels */
 
-    // Degrees to a 16-bit position across the motor's full range of motion.
-    // A fixture with no fine channel gets the high byte only.
+    /**
+     * Requested angle -> 16-bit motor position, mirroring xLights' DmxMotor:
+     *
+     *     cmd = max * orientHome / range  +  max * position / range * rev
+     *
+     * The home offset is a position within the motor's range and is NOT
+     * necessarily mid-scale; the earlier version assumed it was, which happened
+     * to be harmless on a fixture whose home is exactly half its range (pan
+     * 270 of 540, tilt 135 of 270) and would have been wrong on any other.
+     * Reverse negates the requested angle rather than mirroring the result -
+     * the same thing at mid-scale home, different anywhere else.
+     */
     function degTo16(deg, motor) {
-        var half = motor.range / 2;
-        var v = Math.round(((deg + half) / motor.range) * 65535);
-        if (v < 0) { v = 0; }
-        if (v > 65535) { v = 65535; }
-        return motor.reverse ? (65535 - v) : v;
+        var rev = motor.reverse ? -1 : 1;
+        var pos = motor.upsideDown ? -deg : deg;
+        var perDeg = 65535 / motor.range;
+        var v = Math.round(perDeg * ((motor.orientHome || 0) + pos * rev));
+        // xLights folds a whole revolution back into range when it can, rather
+        // than clamping, so a wrapped position still reaches its target.
+        var fullSpin = Math.round(perDeg * 360);
+        if (v < 0 && (v + fullSpin) <= 65535) { v += fullSpin; }
+        if (v > 65535 && (v - fullSpin) >= 0) { v -= fullSpin; }
+        return clamp(v, 0, 65535);
     }
 
     function applyMotor(motor, deg) {
@@ -119,10 +134,10 @@ var MHT = (function () {
     /* ---------------------------------------------------------------- Zones */
 
     // PositionZone: while pan/tilt sit inside the box, a channel is forced to
-    // a value. Pure - returns a copy, never mutates vals, so the honour/ignore
+    // a value. Pure - returns a copy, never mutates vals, so the honor/ignore
     // toggle is just whether the caller uses the result.
     function withZones(src) {
-        if (!honourZones || !fx.zones || !fx.zones.length || !fx.pan || !fx.tilt) {
+        if (!honorZones || !fx.zones || !fx.zones.length || !fx.pan || !fx.tilt) {
             return src;
         }
         var out = src.slice();
@@ -282,7 +297,7 @@ var MHT = (function () {
         }
     }
 
-    function centre() { setAim(0, 0); }
+    function center() { setAim(0, 0); }
 
     /* -------------------------------------------------------------- Surface */
 
@@ -403,7 +418,7 @@ var MHT = (function () {
             var w = document.createElement('div');
             w.className = 'mhtRow mhtRowTop';
             w.innerHTML = '<span class="mhtCh">' + (base + fx.colorWheel.channel - 1) + '</span>' +
-                '<label>Colour</label>';
+                '<label>Color</label>';
             var sw = document.createElement('div');
             sw.className = 'mhtSwatches';
             fx.colorWheel.positions.forEach(function (p) {
@@ -490,7 +505,7 @@ var MHT = (function () {
         }
         $('mhtTake').addEventListener('click', takeControl);
         $('mhtRelease').addEventListener('click', release);
-        $('mhtCentre').addEventListener('click', centre);
+        $('mhtCenter').addEventListener('click', center);
         // Update the two inputs in place rather than rebuilding the surface:
         // buildSurface() renders every slider at 0, so rebuilding here would
         // show every other channel as 0 while its real value was still live.
@@ -511,13 +526,13 @@ var MHT = (function () {
             }
             flush();
         });
-        var z = $('mhtHonour');
+        var z = $('mhtHonor');
         if (z) {
-            z.addEventListener('change', function () { honourZones = z.checked; flush(); });
+            z.addEventListener('change', function () { honorZones = z.checked; flush(); });
         }
         var p = $('mhtPolar');
         if (p) {
-            p.addEventListener('change', function () { polar = p.checked; centre(); });
+            p.addEventListener('change', function () { polar = p.checked; center(); });
         }
 
         // Typed angles. setAim() clamps to the motor's own range of motion, so

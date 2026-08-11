@@ -11,10 +11,10 @@ A bench and setup tool, not a sequencing tool.
 - **A radar pad** you drag to aim. Pan and tilt are written 16-bit across the
   model's coarse and fine channels, applying its range of motion and reverse
   flag. Horizontal/vertical by default; a checkbox switches to bearing/radius.
-- **Controls the model actually declares** — dimmer, shutter, and the colour
+- **Controls the model actually declares** — dimmer, shutter, and the color
   wheel rendered as its own swatches with the DMX value behind each.
 - **Labelled raw sliders** for everything else, named from `NodeNames`.
-- **Position-zone safety**, honoured by default with a visible override.
+- **Position-zone safety**, honored by default with a visible override.
 - **A request log**, so you can see the exact URLs being sent.
 
 ## Installing
@@ -90,7 +90,7 @@ menu.inc                menu entries
 lib/XmodelParser.php    model XML -> fixture descriptor. Pure, no I/O
 lib/FixtureStore.php    persistence + address resolution
 assets/movingheadtest.js   client runtime
-assets/movingheadtest.css  layout only; colour is inherited from FPP's theme
+assets/movingheadtest.css  layout only; color is inherited from FPP's theme
 harness/                off-device preview, see harness/README.md
 scripts/                install / uninstall
 ```
@@ -118,7 +118,7 @@ whole client path without hardware.
 ## Limitations
 
 - One fixture at a time, by design.
-- Colour wheels are supported. RGB and CMY colour models are parsed but have no
+- Color wheels are supported. RGB and CMY color models are parsed but have no
   dedicated control yet; their channels appear as raw sliders.
 - Positions are not saved or recalled.
 - A channel attribute of `0` means unset in xLights, so such a channel becomes a

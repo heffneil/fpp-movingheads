@@ -190,7 +190,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <circle class="mhtDot" id="mhtDot" cx="150" cy="150" r="7"/>
       </svg>
       <div class="mhtRow" style="margin-top:8px">
-        <button type="button" id="mhtCentre" class="buttons">Centre</button>
+        <button type="button" id="mhtCenter" class="buttons">Center</button>
         <button type="button" id="mhtLampOff" class="buttons">Lamp off</button>
         <label style="min-width:auto;display:inline-flex;align-items:center;gap:5px">
           <input type="checkbox" id="mhtPolar"> polar
@@ -229,7 +229,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       <fieldset class="mhtFieldset" id="mhtZoneWrap">
         <legend>position zones</legend>
         <label style="display:flex;align-items:center;gap:7px;font-size:13px">
-          <input type="checkbox" id="mhtHonour" checked> honour this model's PositionZone rules
+          <input type="checkbox" id="mhtHonor" checked> honor this model's PositionZone rules
         </label>
         <div class="mhtNote" id="mhtZoneDesc"></div>
         <div id="mhtZoneState" class="mhtZoneOff">not in a zone</div>

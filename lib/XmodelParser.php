@@ -187,7 +187,14 @@ class XmodelParser
             'fine' => (int) ($n['ChannelFine'] ?? 0),
             'range' => $range > 0 ? $range : $defaultRange,
             'reverse' => ((string) ($n['Reverse'] ?? '0')) === '1',
+            'upsideDown' => ((string) ($n['UpsideDown'] ?? '0')) === '1',
+            // OrientHome: the position in the motor's range the fixture treats as
+            // home. NOT necessarily mid-scale, so it cannot be assumed away.
             'orientHome' => (float) ($n['OrientHome'] ?? 0),
+            // OrientZero: how the fixture is physically mounted. xLights adds it
+            // when rendering the beam, so it maps commanded angle -> real-world
+            // direction. Parsed for the aim display; not part of the DMX maths.
+            'orientZero' => (float) ($n['OrientZero'] ?? 0),
             'min' => (float) ($n['MinLimit'] ?? -180),
             'max' => (float) ($n['MaxLimit'] ?? 180),
         ];
