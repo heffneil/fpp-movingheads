@@ -43,12 +43,44 @@ arbitrary per-channel values. `PUT /overlays/model/{m}/pixel` works but is RGB-t
 shaped, requiring channel→pixel arithmetic and a predefined model. `POST /models/raw`
 is a config upload that sets a restart flag, not a data path.
 
-### The real rig — VERIFIED from `xlights_rgbeffects.xml` (20 moving heads)
+### The live rig — VERIFIED
 
-Source: `/Users/neilheuer/Desktop/Desktop/xlights_rgbeffects.xml` — 3.1 MB, 155 models,
-**last modified 2026-03-27**. It sits beside archived model-mapping spreadsheets, so treat
-it as an old copy, not the live show. It is used here as *test data* only; it is not
-authoritative for what is currently installed.
+Show folder: `/Users/neilheuer/Library/CloudStorage/Dropbox/Xlights/Xmas-2026`
+(`xlights_rgbeffects.xml`, 4.5 MB, 467 models, saved 2026-08-11 07:21). **Two** DMX
+models, both `DmxMovingHeadAdv`, both 16 channels:
+
+| Model | `StartChannel` | Form | Zones | Port / addr |
+|---|---|---|---|---|
+| MH1 | `!Kulp32-FPP-32-2025-3:1` | controller-relative | 2 | 1 / 1 |
+| MH2 | `295200` | **absolute** | 1 | — / — |
+
+- **`StartChannel` has two forms and the parser MUST handle both.** `!Name:N` is
+  controller-relative and needs a base; a bare integer is already absolute and needs none.
+  MH2 also has no `ControllerConnection` element at all.
+- MH1 matches the exported `MH1.xmodel` exactly, so that export is valid live test data.
+- Target controller: `Kulp32-FPP-32-2025-3`, a KulpLights **K32-Max** at **172.16.0.59**
+  over DDP, `MaxChannels=12466`, described "Kulp In Middle of Front Yard". It is an
+  outdoor controller and was powered off when probed on 2026-08-11.
+
+### Why the controller base is user-entered — VERIFIED
+
+`xlights_networks.xml` carries **no absolute start channel** for a controller. The
+`<Controller>` element and its `<network>` child give IP, protocol and `MaxChannels`, but
+with `AutoLayout=1` / `AutoSize=1` xLights *computes* each controller's channel block from
+controller ordering and sizes. Auto-resolving a base would mean reimplementing that
+allocation — rejected as fragile.
+
+A better future path exists and is untried: FPP's own `config/channeloutputs.json` on the
+show player holds the DDP output for `172.16.0.59` with its `startChannel`, which is
+authoritative for the machine actually emitting the channels.
+
+### Additional test data — an archived show (20 moving heads)
+
+`/Users/neilheuer/Desktop/Desktop/xlights_rgbeffects.xml` — 3.1 MB, 155 models,
+**last modified 2026-03-27**, sitting beside archived model-mapping spreadsheets. **Not
+the live rig** — it predates it and contains a different, more varied set: 8 fixtures of
+9 channels and 12 of 16, none with zones, none with `DmxChannelCount`. Retained purely
+because that variety exercises parser paths the 2-fixture live show does not.
 
 Two fixture types, both `DmxMovingHeadAdv`, controller `Moving Heads`, `DMX-Open`:
 
@@ -84,7 +116,11 @@ Two fixture types, both `DmxMovingHeadAdv`, controller `Moving Heads`, `DMX-Open
 
 ## Addressing model
 
-One **base channel per controller name**, not per fixture:
+Resolution depends on which `StartChannel` form a model uses:
+
+- **Bare integer** (MH2 = `295200`) → already absolute. Used as-is, no base required.
+- **`!Controller:N`** (MH1 = `!Kulp32-FPP-32-2025-3:1`) → one **base channel per
+  controller name**, not per fixture:
 
 ```
 absolute = controllerBase + N − 1
@@ -202,9 +238,12 @@ normal, not an error.
 1. `XmodelParser` unit tests against real data: `MH1.xmodel` (16 ch, colour wheel,
    16-bit motors, 2 zones, `DmxChannelCount` present) and the 20 show-file models
    (9 and 16 ch, no zones, `DmxChannelCount` absent, one omitted `channel` attribute).
-   Named cases that must be covered: MH-1 empty labels at 5–6; MH2-1
-   `DmxDimmerChannel="0"` contradicting its "Dimmer" label; MH2-1 missing
-   `DmxShutterOnValue`; MH6-1 omitted `ControllerConnection channel`.
+   Named cases that must be covered, from the live show: MH1 relative
+   `!Kulp32-FPP-32-2025-3:1` with 2 zones; MH2 **absolute** `295200` with no
+   `ControllerConnection` element at all. From the archive: MH-1 empty labels at 5–6;
+   MH2-1 `DmxDimmerChannel="0"` contradicting its "Dimmer" label; MH2-1 missing
+   `DmxShutterOnValue`; MH6-1 omitted `ControllerConnection channel`; `DmxChannelCount`
+   absent throughout, forcing the `NodeNames` fallback.
 2. `ChannelState` unit tests for degrees→16-bit, specifically `reverse=true` with a
    540° range — the most likely place for a sign or scaling error.
 3. Off-device: serve the plugin page under the PHP preview harness with
