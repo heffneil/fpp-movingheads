@@ -45,6 +45,11 @@ is a config upload that sets a restart flag, not a data path.
 
 ### The real rig — VERIFIED from `xlights_rgbeffects.xml` (20 moving heads)
 
+Source: `/Users/neilheuer/Desktop/Desktop/xlights_rgbeffects.xml` — 3.1 MB, 155 models,
+**last modified 2026-03-27**. It sits beside archived model-mapping spreadsheets, so treat
+it as an old copy, not the live show. It is used here as *test data* only; it is not
+authoritative for what is currently installed.
+
 Two fixture types, both `DmxMovingHeadAdv`, controller `Moving Heads`, `DMX-Open`:
 
 | Fixtures | Channels | Addresses (`!Moving Heads:N`) |
@@ -142,13 +147,37 @@ a percentage control: the model itself declares no dimmer channel.
 
 Role-driven, so unknown channels degrade gracefully instead of being dropped:
 
-- `panCoarse`/`panFine`, `tiltCoarse`/`tiltFine` → one slider in **degrees**, written as
-  16-bit across both channels, applying `rangeOfMotion`, `reverse`, `orientHome`
+- `panCoarse`/`panFine`, `tiltCoarse`/`tiltFine` → a **polar radar aim pad** (bearing =
+  pan, radius from centre = tilt), dragged to aim, written as 16-bit across both channel
+  pairs applying `rangeOfMotion`, `reverse`, `orientHome`. Degree sliders remain available
+  for precise numeric entry, but the pad is the primary control — dragging a head to aim
+  it is how the fixture actually gets tested. A Home button returns to `orientHome`.
 - `dimmer` → 0–100% slider
 - `shutter` → open/closed using `DmxShutterOnValue`, plus a raw value entry for strobe
 - `colorWheel` → clickable swatches from the wheel table (`DmxColorType=1`); RGB and CMY
   are out of scope until there is a fixture to test them against
 - `raw` → labelled 0–255 slider using the `NodeNames` label
+
+## Write throughput during a drag
+
+The overlay endpoint accepts **one value per request** (many ranges, single value). A radar
+position sets four channels to four different values, so a naive drag costs 4 requests per
+position update — roughly 80/sec at a normal drag rate, through Apache to `fppd`. That is
+more than this design is willing to spend.
+
+`OverlayWriter` therefore:
+
+1. Coalesces to the **latest** position via `requestAnimationFrame`, throttled to ~20 Hz —
+   intermediate positions during a fast drag are dropped, never queued.
+2. Sends **coarse channels only while the pointer is down** (2 requests per tick), then
+   sends the fine channels once on release. 8-bit pan across a 540° range is 2.1° per
+   step, so mid-drag accuracy is a couple of degrees and full 16-bit precision lands the
+   moment the drag ends.
+3. Sends nothing when a channel's value is unchanged.
+
+This is the one place the pure-PHP/JS choice has a cost. It is contained: `OverlayWriter`
+is the only module that would change if the mmap or C++ path were needed instead, and its
+interface does not leak the transport.
 
 ## Lifecycle and safety
 
