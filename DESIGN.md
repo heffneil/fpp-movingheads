@@ -126,10 +126,13 @@ Resolution depends on which `StartChannel` form a model uses:
 absolute = controllerBase + N − 1
 ```
 
-With `Moving Heads` base = 1: MH-1→1, MH6-2→193, MH4-4→321. Default base 1, editable.
-Each fixture also gets an optional manual absolute override for cases like the 17–32
-hole. The xmodel cannot supply the base: `StartChannel` is controller-relative, and the
-absolute origin depends on FPP's own channel-output configuration.
+So MH2 needs no configuration at all, while MH1 needs the `Kulp32-FPP-32-2025-3` base set
+once. Bases default to 1 and are editable per controller name; each fixture additionally
+gets an optional manual absolute override.
+
+A relative `StartChannel` cannot be resolved from the model file alone — the absolute
+origin lives in the channel-output configuration of the FPP instance actually emitting the
+channels, not in anything xLights exports. See "Why the controller base is user-entered".
 
 ## Architecture
 
