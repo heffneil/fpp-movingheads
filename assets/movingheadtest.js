@@ -34,6 +34,12 @@ var MHT = (function () {
     var shutterInput = null;
     var R = 144, C = 150;     // radar geometry, in the 300x300 viewBox
 
+    // Password managers latch onto bare number inputs and pop their autofill UI
+    // over a field that is just a DMX value. Each vendor honours its own opt-out;
+    // autocomplete="off" alone does not stop 1Password.
+    var PM_OPTOUT = 'autocomplete="off" data-1p-ignore data-lpignore="true" ' +
+                    'data-bwignore data-form-type="other"';
+
     function $(id) { return document.getElementById(id); }
 
     /* ------------------------------------------------------------- Channels */
@@ -291,7 +297,8 @@ var MHT = (function () {
         d.innerHTML = '<span class="mhtCh">' + chAbs + '</span>' +
             '<label title="' + label + '"' + (muted ? ' class="mhtMuted"' : '') + '>' + label + '</label>' +
             '<input type="range" min="0" max="' + max + '" step="1" value="' + value + '">' +
-            '<input type="number" class="mhtVal" min="0" max="' + max + '" step="1" value="' + value + '">';
+            '<input type="number" class="mhtVal" min="0" max="' + max + '" step="1" value="' + value + '"' +
+            ' ' + PM_OPTOUT + '>';
         var slider = d.querySelector('input[type=range]');
         var num = d.querySelector('input[type=number]');
         bindPair(slider, num, max, onInput);
@@ -378,6 +385,11 @@ var MHT = (function () {
             var sv = document.createElement('input');
             sv.type = 'number'; sv.className = 'mhtVal';
             sv.min = 0; sv.max = 255; sv.step = 1; sv.value = 0;
+            sv.setAttribute('autocomplete', 'off');
+            sv.setAttribute('data-1p-ignore', '');
+            sv.setAttribute('data-lpignore', 'true');
+            sv.setAttribute('data-bwignore', '');
+            sv.setAttribute('data-form-type', 'other');
             bindPair(sl, sv, 255, function (v) {
                 vals[fx.shutter.channel] = v;
                 flush();

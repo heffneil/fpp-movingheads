@@ -6,16 +6,19 @@
  * $settings and the FPP setting helpers are already available and this file
  * must not emit <html> or <head>.
  *
- * This file deliberately does NOT emit its own <script> or <style> for the
- * plugin's assets. Apache's DocumentRoot is /opt/fpp/www with no alias for the
- * plugins directory, but plugin.php proxies plugin files anyway and auto-
- * includes every entry in js/ and css/ into the page head:
+ * Assets live in assets/ and are inlined here, deliberately NOT in js/ and
+ * css/. plugin.php auto-includes everything in those two directories, but it
+ * serves them as:
  *
  *     plugin.php?plugin=<repoName>&file=js/<name>&nopage=1
  *
- * Inlining them here as well would load the runtime twice, so init() would run
- * twice and every control would end up with two listeners and two conflicting
- * state closures.
+ * with "Cache-Control: max-age=31536000, immutable" and no version parameter -
+ * while FPP busts cache on its own assets with ?ref=<filemtime>. A browser that
+ * has loaded the page once will therefore never pick up a change to the runtime,
+ * and "immutable" means it will not even revalidate. Naming the directory
+ * something plugin.php does not scan, and inlining, means an update always takes
+ * effect. It also avoids loading the runtime twice, which would give every
+ * control two listeners and two conflicting state closures.
  */
 
 require_once __DIR__ . '/lib/XmodelParser.php';
@@ -86,6 +89,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     return empty($f['absoluteStart']);
 }));
 ?>
+<style><?php readfile(__DIR__ . '/assets/movingheadtest.css'); ?></style>
+
 <div class="container-fluid">
   <h2>Moving Head Test</h2>
 
@@ -130,14 +135,14 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   <input type="hidden" name="mhtAction" value="base">
                   <input type="hidden" name="controller"
                          value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
-                  <input type="number" name="baseChannel" min="1" step="1" value="1" style="width:110px">
+                  <input type="number" name="baseChannel" min="1" step="1" value="1" style="width:110px" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
               <?php else: ?>
                 <form method="post" style="display:inline-flex;gap:6px">
                   <input type="hidden" name="mhtAction" value="override">
                   <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
-                  <input type="number" name="absolute" min="1" step="1" placeholder="absolute" style="width:110px">
+                  <input type="number" name="absolute" min="1" step="1" placeholder="absolute" style="width:110px" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
               <?php endif; ?>
@@ -198,14 +203,14 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <div id="mhtPanWrap">
           <div class="mhtK">Pan</div>
           <div class="mhtBigWrap">
-            <input type="number" class="mhtBig" id="mhtPanDeg" step="1" value="0"><span class="mhtDeg">&deg;</span>
+            <input type="number" class="mhtBig" id="mhtPanDeg" step="1" value="0" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"><span class="mhtDeg">&deg;</span>
           </div>
           <div class="mhtRaw" id="mhtPanRaw">&mdash;</div>
         </div>
         <div id="mhtTiltWrap">
           <div class="mhtK">Tilt</div>
           <div class="mhtBigWrap">
-            <input type="number" class="mhtBig" id="mhtTiltDeg" step="1" value="0"><span class="mhtDeg">&deg;</span>
+            <input type="number" class="mhtBig" id="mhtTiltDeg" step="1" value="0" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"><span class="mhtDeg">&deg;</span>
           </div>
           <div class="mhtRaw" id="mhtTiltRaw">&mdash;</div>
         </div>
@@ -273,5 +278,6 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   </fieldset>
 
   <script>window.MHT_FIXTURES = <?php echo json_encode($ready, JSON_UNESCAPED_SLASHES); ?>;</script>
+  <script><?php readfile(__DIR__ . '/assets/movingheadtest.js'); ?></script>
   <?php endif; ?>
 </div>

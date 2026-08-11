@@ -89,15 +89,20 @@ about.php               help (single 'help' menu entry)
 menu.inc                menu entries
 lib/XmodelParser.php    model XML -> fixture descriptor. Pure, no I/O
 lib/FixtureStore.php    persistence + address resolution
-js/movingheadtest.js    client runtime
-css/movingheadtest.css  layout only; colour is inherited from FPP's theme
+assets/movingheadtest.js   client runtime
+assets/movingheadtest.css  layout only; colour is inherited from FPP's theme
 harness/                off-device preview, see harness/README.md
 scripts/                install / uninstall
 ```
 
-`js/` and `css/` are inlined by `status.php` at render time. FPP's Apache
-DocumentRoot is `/opt/fpp/www` with no alias for the plugins directory, so a
-plugin's own static files are not reachable over HTTP.
+Assets are inlined by `status.php` at render time, and live in `assets/` rather
+than `js/` and `css/` on purpose. `plugin.php` auto-includes anything in those
+two directories, but serves it with `Cache-Control: max-age=31536000, immutable`
+and **no version parameter** — while FPP busts cache on its own assets with
+`?ref=<filemtime>`. A browser that has loaded the page once would therefore
+never see a plugin update, and `immutable` means it would not even revalidate.
+Inlining from a directory `plugin.php` does not scan sidesteps that, and avoids
+loading the runtime twice.
 
 ## Developing off-device
 
