@@ -28,3 +28,13 @@ including a phone while standing in the yard.
   0, pan 155–255 forces pan to 0. Uncheck only deliberately.
 - "Release" (and closing the tab) deletes the overlay range. Without that the
   fixture holds its last values indefinitely.
+
+## C. Plugin page preview (no device needed)
+
+    php harness/seed.php /Users/neilheuer/Desktop/MH1.xmodel
+    php -S 127.0.0.1:8145 -t harness harness/plugin-preview.php
+
+Open http://127.0.0.1:8145/ - the real status.php, with FPP stubbed and the
+overlay API mocked. Every request is recorded; read them at /requests and clear
+with /reset. This is how the write grouping, the diffing, the zone guard and the
+release path were verified without touching hardware.

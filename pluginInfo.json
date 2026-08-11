@@ -1,0 +1,19 @@
+{
+	"repoName": "fpp-plugin-MovingHeadTest",
+	"name": "Moving Head Test",
+	"author": "Neil Heuer (heffneil)",
+	"description": "Import xLights DMX moving-head models and drive one fixture live from the browser to verify it is addressed correctly and that every channel does what the model claims. A radar pad aims pan and tilt, the model's own colour wheel becomes swatches, dimmer and shutter get real controls, and anything the model does not describe gets a labelled raw slider. Values are written through FPP's overlay range API, so no sequence or configuration change is needed and nothing is left behind once you release the fixture.",
+	"homeURL": "https://github.com/heffneil/fpp-plugin-MovingHeadTest",
+	"srcURL": "https://github.com/heffneil/fpp-plugin-MovingHeadTest.git",
+	"bugURL": "https://github.com/heffneil/fpp-plugin-MovingHeadTest/issues",
+	"iconURL": "https://raw.githubusercontent.com/heffneil/fpp-plugin-MovingHeadTest/master/icon.png",
+	"allowUpdates": 1,
+	"versions": [
+		{
+			"minFPPVersion": "10.0",
+			"maxFPPVersion": "0",
+			"branch": "master",
+			"sha": ""
+		}
+	]
+}
