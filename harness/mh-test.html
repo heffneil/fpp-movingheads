@@ -1,0 +1,219 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MH1 test — 172.16.0.59</title>
+<style>
+  :root{--bg:#16171a;--card:#1e2024;--line:#31343a;--fg:#e8e9ea;--dim:#9a9da3;--acc:#5aa9f0;--ok:#5ecf8f;--warn:#e2b04b;--danger:#e2645a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,system-ui,sans-serif;padding:18px}
+  h1{font-size:17px;font-weight:500;margin:0}
+  .sub{color:var(--dim);font-size:12px;margin-top:2px}
+  .wrap{max-width:1080px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .grow{flex:1}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+  .cols{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+  button{background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 13px;font:inherit;cursor:pointer}
+  button:hover{border-color:#4a4e56}
+  button.on{border-color:var(--acc);color:var(--acc)}
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+  .pill.live{border-color:var(--ok);color:var(--ok)}
+  .pill.off{border-color:var(--danger);color:var(--danger)}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .row label{min-width:104px;font-size:13px;color:var(--dim)}
+  .row input[type=range]{flex:1;accent-color:var(--acc)}
+  .val{min-width:70px;text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+  .ch{font:11px ui-monospace,Menlo,monospace;color:#6d7178;min-width:52px}
+  .sw{display:flex;flex-wrap:wrap;gap:6px}
+  .sw button{width:30px;height:30px;padding:0;border-radius:5px;border:1px solid #44474d}
+  .sw button.on{outline:2px solid var(--acc);outline-offset:1px}
+  #log{font:11px ui-monospace,Menlo,monospace;color:var(--dim);max-height:170px;overflow:auto;white-space:pre-wrap}
+  .big{font-size:22px;font-variant-numeric:tabular-nums}
+  .k{color:var(--dim);font-size:12px}
+  fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 10px}
+  legend{color:var(--dim);font-size:12px;padding:0 5px}
+</style>
+<div class="wrap">
+  <div class="bar">
+    <div class="grow">
+      <h1>MH1 — moving head test</h1>
+      <div class="sub">172.16.0.59 · Kulp32-MAX-6 · DMX-Open · base channel 109433 · 16 channels</div>
+    </div>
+    <span id="state" class="pill off">released</span>
+    <button id="take">Take control</button>
+    <button id="release">Release</button>
+  </div>
+
+  <div class="cols">
+    <div class="card" style="flex:0 0 auto">
+      <svg id="pad" viewBox="0 0 300 300" width="300" height="300" style="touch-action:none;cursor:crosshair">
+        <circle cx="150" cy="150" r="144" fill="#191b1e" stroke="#3a3d44"/>
+        <circle cx="150" cy="150" r="108" fill="none" stroke="#2a2d33"/>
+        <circle cx="150" cy="150" r="72" fill="none" stroke="#2a2d33"/>
+        <circle cx="150" cy="150" r="36" fill="none" stroke="#2a2d33"/>
+        <line x1="150" y1="6" x2="150" y2="294" stroke="#2a2d33"/>
+        <line x1="6" y1="150" x2="294" y2="150" stroke="#2a2d33"/>
+        <text x="150" y="22" text-anchor="middle" fill="#6d7178" font-size="11">tilt +</text>
+        <text x="150" y="286" text-anchor="middle" fill="#6d7178" font-size="11">tilt −</text>
+        <text x="272" y="146" text-anchor="middle" fill="#6d7178" font-size="11">pan +</text>
+        <text x="30" y="146" text-anchor="middle" fill="#6d7178" font-size="11">pan −</text>
+        <line id="ray" x1="150" y1="150" x2="150" y2="150" stroke="#5aa9f0" stroke-width="1.5"/>
+        <circle id="dot" cx="150" cy="150" r="8" fill="#5aa9f0"/>
+      </svg>
+      <div class="row" style="margin:8px 0 0">
+        <button id="center">Centre</button>
+        <button id="alloff">Lamp off</button>
+        <label style="min-width:auto;display:flex;align-items:center;gap:6px;color:var(--dim)">
+          <input type="checkbox" id="polar"> polar
+        </label>
+      </div>
+    </div>
+
+    <div class="grow" style="min-width:330px">
+      <div class="card">
+        <div class="cols" style="gap:24px">
+          <div><div class="k">Pan</div><div class="big" id="panDeg">0°</div><div class="ch" id="panRaw">—</div></div>
+          <div><div class="k">Tilt</div><div class="big" id="tiltDeg">0°</div><div class="ch" id="tiltRaw">—</div></div>
+        </div>
+      </div>
+
+      <fieldset><legend>semantic</legend>
+        <div class="row"><span class="ch">109440</span><label>Dimmer</label><input type="range" id="dim" min="0" max="255" value="0"><span class="val" id="dimV">0</span></div>
+        <div class="row"><span class="ch">109439</span><label>Shutter</label>
+          <button id="shOpen">Open</button><button id="shShut" class="on">Closed</button>
+          <span class="val k">on=255</span></div>
+        <div class="row" style="align-items:flex-start"><span class="ch">109441</span><label>Colour</label>
+          <div class="sw" id="wheel"></div></div>
+      </fieldset>
+
+      <fieldset><legend>raw</legend><div id="raws"></div></fieldset>
+
+      <fieldset><legend>safety</legend>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+          <input type="checkbox" id="zones" checked> honour PositionZone rules
+        </label>
+        <div class="sub" id="zoneMsg">pan 0–84 forces dimmer to 0 · pan 155–255 forces pan to 0</div>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="card"><div class="k" style="margin-bottom:6px">requests</div><div id="log">idle</div></div>
+</div>
+<script>
+const BASE=109433, COUNT=16;
+const PAN={c:1,f:3,range:540,reverse:true}, TILT={c:2,f:4,range:270,reverse:false};
+const WHEEL=[[2,'#ffffff'],[9,'#ff0000'],[18,'#ffff00'],[26,'#0000ff'],[34,'#00ff00'],[42,'#d4edfc'],[50,'#ff830f'],[58,'#62fef4'],[66,'#f93ef3'],[74,'#ffff00'],[82,'#ff80d7'],[90,'#03138c'],[64,'#fffb94'],[106,'#8f8f8f']];
+const RAW=[[5,'Pan/Tilt speed'],[6,'Frost'],[10,'Blank'],[11,'Gobo'],[12,'Gobo jitter'],[13,'Focus'],[14,'Prism 1'],[15,'Prism 2'],[16,'Lamp / reset']];
+
+let live=false, dragging=false, panDeg=0, tiltDeg=0;
+const state=new Array(COUNT+1).fill(0);   // 1-indexed by offset
+let sent=new Array(COUNT+1).fill(-1);
+const $=id=>document.getElementById(id);
+
+function log(m){const l=$('log');l.textContent=(m+'\n'+l.textContent).split('\n').slice(0,14).join('\n');}
+
+async function put(path){
+  try{
+    const r=await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:'{}'});
+    const t=await r.text();
+    log((r.ok?'  ':'✗ ')+r.status+'  '+path+(r.ok?'':'  '+t.slice(0,80)));
+    return r.ok;
+  }catch(e){log('✗ fail  '+path+'  '+e.message);return false;}
+}
+
+function deg16(d,m){let v=Math.round(((d+m.range/2)/m.range)*65535);v=Math.max(0,Math.min(65535,v));return m.reverse?65535-v:v;}
+
+function zoneOverrides(s){
+  if(!$('zones').checked) return s;
+  const o=s.slice(), pan=o[PAN.c];
+  if(pan>=0&&pan<=84) o[8]=0;
+  if(pan>=155&&pan<=255) o[1]=0;
+  return o;
+}
+
+function compose(){
+  const p=deg16(panDeg,PAN), t=deg16(tiltDeg,TILT);
+  state[PAN.c]=p>>8; state[PAN.f]=p&255;
+  state[TILT.c]=t>>8; state[TILT.f]=t&255;
+  $('panDeg').textContent=Math.round(panDeg)+'°';
+  $('tiltDeg').textContent=Math.round(tiltDeg)+'°';
+  $('panRaw').textContent='ch1='+(p>>8)+' ch3='+(p&255);
+  $('tiltRaw').textContent='ch2='+(t>>8)+' ch4='+(t&255);
+}
+
+let pending=false;
+function flush(){
+  if(pending) return; pending=true;
+  requestAnimationFrame(async()=>{
+    pending=false;
+    if(!live) return;
+    const eff=zoneOverrides(state);
+    const skipFine=dragging;
+    for(let o=1;o<=COUNT;o++){
+      if(skipFine&&(o===PAN.f||o===TILT.f)) continue;
+      if(eff[o]===sent[o]) continue;
+      sent[o]=eff[o];
+      await put('/api/overlays/range/'+(BASE+o-1)+'-'+(BASE+o-1)+'/'+eff[o]);
+    }
+  });
+}
+function touch(){compose();flush();}
+
+// radar pad
+const pad=$('pad');
+function setFromPoint(px,py){
+  let dx=px-150, dy=py-150, r=Math.hypot(dx,dy);
+  if(r>144){dx*=144/r;dy*=144/r;r=144;}
+  if($('polar').checked){
+    panDeg=Math.atan2(dx,-dy)*180/Math.PI;
+    tiltDeg=(r/144)*135;
+  }else{
+    panDeg=(dx/144)*180;
+    tiltDeg=-(dy/144)*135;
+  }
+  $('dot').setAttribute('cx',150+dx); $('dot').setAttribute('cy',150+dy);
+  $('ray').setAttribute('x2',150+dx); $('ray').setAttribute('y2',150+dy);
+  touch();
+}
+function pt(e){const b=pad.getBoundingClientRect();return[(e.clientX-b.left)/b.width*300,(e.clientY-b.top)/b.height*300];}
+pad.addEventListener('pointerdown',e=>{dragging=true;pad.setPointerCapture(e.pointerId);const p=pt(e);setFromPoint(p[0],p[1]);});
+pad.addEventListener('pointermove',e=>{if(dragging){const p=pt(e);setFromPoint(p[0],p[1]);}});
+pad.addEventListener('pointerup',()=>{dragging=false;touch();});
+
+// controls
+$('dim').oninput=e=>{state[8]=+e.target.value;$('dimV').textContent=e.target.value;flush();};
+$('shOpen').onclick=()=>{state[7]=255;$('shOpen').classList.add('on');$('shShut').classList.remove('on');flush();};
+$('shShut').onclick=()=>{state[7]=0;$('shShut').classList.add('on');$('shOpen').classList.remove('on');flush();};
+$('center').onclick=()=>{panDeg=0;tiltDeg=0;$('dot').setAttribute('cx',150);$('dot').setAttribute('cy',150);$('ray').setAttribute('x2',150);$('ray').setAttribute('y2',150);touch();};
+$('alloff').onclick=()=>{state[8]=0;$('dim').value=0;$('dimV').textContent='0';state[7]=0;$('shShut').classList.add('on');$('shOpen').classList.remove('on');flush();};
+$('zones').onchange=flush;
+
+WHEEL.forEach(([dmx,hex])=>{
+  const b=document.createElement('button');
+  b.style.background=hex; b.title='DMX '+dmx;
+  b.onclick=()=>{state[9]=dmx;[...$('wheel').children].forEach(c=>c.classList.remove('on'));b.classList.add('on');flush();};
+  $('wheel').appendChild(b);
+});
+RAW.forEach(([off,name])=>{
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML='<span class="ch">'+(BASE+off-1)+'</span><label>'+name+'</label>'+
+    '<input type="range" min="0" max="255" value="0"><span class="val">0</span>';
+  const inp=d.querySelector('input'), out=d.querySelector('.val');
+  inp.oninput=()=>{state[off]=+inp.value;out.textContent=inp.value;flush();};
+  $('raws').appendChild(d);
+});
+
+$('take').onclick=()=>{live=true;sent.fill(-1);$('state').textContent='in control';$('state').className='pill live';log('— took control, base '+BASE);touch();};
+async function release(){
+  if(!live) return; live=false;
+  $('state').textContent='released'; $('state').className='pill off';
+  await put('/api/overlays/range/'+BASE+'-'+(BASE+COUNT-1)+'/delete');
+  log('— released '+BASE+'-'+(BASE+COUNT-1));
+}
+$('release').onclick=release;
+window.addEventListener('beforeunload',()=>{
+  if(live) navigator.sendBeacon?navigator.sendBeacon('/api/overlays/range/'+BASE+'-'+(BASE+COUNT-1)+'/delete'):null;
+});
+compose();
+log('ready — press Take control, then drag. Dimmer starts at 0.');
+</script>
