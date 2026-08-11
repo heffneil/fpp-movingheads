@@ -1,0 +1,56 @@
+/*
+ * Deliberately minimal: FPP ships bootstrap and its own light/dark theme, so
+ * this only adds layout and inherits colour from the host page. No hardcoded
+ * backgrounds or text colours, or the plugin would clash in one of the themes.
+ */
+
+.mhtWrap { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+.mhtCol { flex: 1; min-width: 320px; }
+
+.mhtBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.mhtBar .mhtGrow { flex: 1; }
+
+.mhtPill { font-size: 11px; padding: 3px 10px; border-radius: 12px; border: 1px solid currentColor; opacity: .85; }
+.mhtLive { color: #2e8b57; }
+.mhtOff  { color: #b04a44; }
+
+.mhtRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.mhtRowTop { align-items: flex-start; }
+.mhtRow label { min-width: 108px; margin: 0; font-size: 13px; }
+.mhtRow input[type=range] { flex: 1; min-width: 90px; }
+.mhtRow button { padding: 2px 11px; font-size: 12px; }
+.mhtVal { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.mhtCh { min-width: 58px; font-family: monospace; font-size: 11px; opacity: .6; }
+.mhtMuted { opacity: .72; }
+
+.mhtSwatches { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+.mhtSwatches button { width: 27px; height: 27px; padding: 0; border-radius: 4px; border: 1px solid rgba(128,128,128,.5); }
+.mhtSwatches button.mhtOn, .mhtRow button.mhtOn { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+.mhtReadout { display: flex; gap: 26px; margin-bottom: 12px; flex-wrap: wrap; }
+.mhtReadout .mhtK { font-size: 12px; opacity: .7; }
+.mhtReadout .mhtBig { font-size: 21px; font-variant-numeric: tabular-nums; }
+.mhtReadout .mhtRaw { font-family: monospace; font-size: 11px; opacity: .6; }
+
+.mhtRadar { touch-action: none; cursor: crosshair; max-width: 300px; height: auto; }
+.mhtRadarBg { fill: none; stroke: currentColor; opacity: .28; }
+.mhtRadarRing { fill: none; stroke: currentColor; opacity: .14; }
+.mhtRadarAxis { stroke: currentColor; opacity: .14; }
+.mhtRadarTick { font-size: 10px; fill: currentColor; opacity: .5; }
+.mhtDot { fill: #3b82f6; }
+.mhtRay { stroke: #3b82f6; stroke-width: 1.4; }
+
+.mhtFieldset { border: 1px solid rgba(128,128,128,.32); border-radius: 7px; padding: 9px 12px; margin: 0 0 12px; }
+.mhtFieldset legend { font-size: 12px; opacity: .7; padding: 0 5px; width: auto; margin: 0; border: 0; }
+
+.mhtNote { font-size: 12px; opacity: .65; }
+.mhtZoneOn { font-size: 12px; color: #b8860b; }
+.mhtZoneOff { font-size: 12px; opacity: .6; }
+
+#mhtLog { font-family: monospace; font-size: 11px; opacity: .75; max-height: 150px; overflow: auto; white-space: pre-wrap; margin: 0; }
+
+.mhtImport { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mhtTable { width: auto; font-size: 13px; }
+.mhtTable td, .mhtTable th { padding: 3px 12px 3px 0; text-align: left; font-weight: normal; }
+.mhtTable th { font-size: 11px; opacity: .6; }
+.mhtWarn { color: #b04a44; font-size: 12px; }

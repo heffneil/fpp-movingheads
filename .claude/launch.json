@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mht-plugin-preview",
+      "runtimeExecutable": "php",
+      "runtimeArgs": [
+        "-S", "127.0.0.1:8145",
+        "-t", "/Users/neilheuer/claude-code/fpp-plugin-MovingHeadTest/harness",
+        "/Users/neilheuer/claude-code/fpp-plugin-MovingHeadTest/harness/plugin-preview.php"
+      ],
+      "port": 8145
+    }
+  ]
+}
