@@ -52,7 +52,7 @@
         vertical is tilt; the <em>polar</em> checkbox switches to bearing-and-radius. Pan and
         tilt are written 16-bit across the model's coarse and fine channels, applying its
         range of motion and reverse flag.</li>
-    <li><strong>Declared by the model</strong> &mdash; dimmer, shutter and colour wheel appear
+    <li><strong>Declared by the model</strong> &mdash; dimmer, shutter and color wheel appear
         only when the model actually declares them. A channel attribute of <code>0</code> means
         unset in xLights, so such a channel becomes a raw slider instead, even if its label
         says otherwise.</li>
@@ -63,7 +63,7 @@
   <h3>Safety</h3>
   <ul>
     <li>All channels start at 0, so nothing lights until you raise the dimmer.</li>
-    <li><strong>Position zones are honoured by default.</strong> Where a model defines
+    <li><strong>Position zones are honored by default.</strong> Where a model defines
         <code>PositionZone</code> rules, a channel is forced to its zone value while pan and
         tilt sit inside that box &mdash; typically a blackout arc pointed somewhere you do not
         want lit. The checkbox disables that, which is worth doing only deliberately.</li>
@@ -79,7 +79,7 @@
   <h3>Known limitations</h3>
   <ul>
     <li>One fixture at a time, by design.</li>
-    <li>Colour is supported for wheel-type fixtures. RGB and CMY colour models are parsed but
+    <li>Color is supported for wheel-type fixtures. RGB and CMY color models are parsed but
         have no dedicated control yet &mdash; their channels appear as raw sliders.</li>
     <li>Positions are not saved or recalled.</li>
     <li>Requires FPP 10. The overlay range endpoint has not been verified on 9.x.</li>

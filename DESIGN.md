@@ -9,7 +9,7 @@ plugin is shaped the way it is; see the README for how to use it.
 
 Import xLights moving-head model definitions, register each fixture against its DMX
 address, then drive one fixture's channels live from a browser to verify it responds
-correctly — pan, tilt, dimmer, shutter, colour, and every remaining channel.
+correctly — pan, tilt, dimmer, shutter, color, and every remaining channel.
 
 This is a bench/setup tool: confirm a fixture is addressed correctly and each channel
 does what the model claims. It is not a show-authoring or cue tool.
@@ -187,7 +187,7 @@ a percentage control: the model itself declares no dimmer channel.
 Role-driven, so unknown channels degrade gracefully instead of being dropped:
 
 - `panCoarse`/`panFine`, `tiltCoarse`/`tiltFine` → a **polar radar aim pad** (bearing =
-  pan, radius from centre = tilt), dragged to aim, written as 16-bit across both channel
+  pan, radius from center = tilt), dragged to aim, written as 16-bit across both channel
   pairs applying `rangeOfMotion`, `reverse`, `orientHome`. Degree sliders remain available
   for precise numeric entry, but the pad is the primary control — dragging a head to aim
   it is how the fixture actually gets tested. A Home button returns to `orientHome`.
@@ -231,14 +231,14 @@ the design, so control is explicit:
 **Test scope:** one fixture at a time, chosen from a list. No other fixture's channels
 are written, ever.
 
-**Position zones:** honoured by default, with a clearly-labelled override toggle for
+**Position zones:** honored by default, with a clearly-labelled override toggle for
 deliberately exercising a fixture's full mechanical range. `ZoneGuard` is pure and the
 toggle merely bypasses it, so both paths share one implementation. Absent zones are
 normal, not an error.
 
 ## Verification plan
 
-1. `XmodelParser` unit tests against real data: `MH1.xmodel` (16 ch, colour wheel,
+1. `XmodelParser` unit tests against real data: `MH1.xmodel` (16 ch, color wheel,
    16-bit motors, 2 zones, `DmxChannelCount` present) and the 20 show-file models
    (9 and 16 ch, no zones, `DmxChannelCount` absent, one omitted `channel` attribute).
    Named cases that must be covered, from the live show: MH1 relative
@@ -257,7 +257,7 @@ normal, not an error.
 ## Out of scope
 
 Multiple simultaneous fixtures; saved/recalled positions; chases and movement patterns;
-RGB and CMY colour models; editing or writing back to xLights files.
+RGB and CMY color models; editing or writing back to xLights files.
 
 ## Open questions
 
