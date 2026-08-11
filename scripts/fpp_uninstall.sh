@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# fpp-plugin-MovingHeadTest uninstall script
+# fpp-movingheads uninstall script
 
 . ${FPPDIR}/scripts/common
 
@@ -20,9 +20,9 @@ set -e
 #     full rather than releasing them. Deleting exactly what was created
 #     avoids that entirely.
 
-DATADIR="${MEDIADIR}/plugindata/fpp-plugin-MovingHeadTest"
+DATADIR="${MEDIADIR}/plugindata/fpp-movingheads"
 FIXTURES="${DATADIR}/fixtures.json"
-PLUGINCFG="${MEDIADIR}/config/plugin.fpp-plugin-MovingHeadTest"
+PLUGINCFG="${MEDIADIR}/config/plugin.fpp-movingheads"
 
 if [ -r "${FIXTURES}" ]; then
     RANGES=$(php -r '
@@ -62,6 +62,6 @@ fi
 
 # Imported fixtures are user data and are left in place, so reinstalling does
 # not lose them. To wipe them:
-#   rm -rf ${MEDIADIR}/plugindata/fpp-plugin-MovingHeadTest
+#   rm -rf ${MEDIADIR}/plugindata/fpp-movingheads
 
-echo "fpp-plugin-MovingHeadTest uninstalled."
+echo "fpp-movingheads uninstalled."

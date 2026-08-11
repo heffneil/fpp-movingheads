@@ -1,5 +1,5 @@
 /*
- * fpp-plugin-MovingHeadTest - client runtime
+ * fpp-movingheads - client runtime
  *
  * Drives one fixture at a time by writing absolute DMX channels through
  * FPP's overlay range API:

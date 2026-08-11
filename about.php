@@ -87,6 +87,6 @@
 
   <h3>Source</h3>
   <p>
-    <a href="https://github.com/heffneil/fpp-plugin-MovingHeadTest">github.com/heffneil/fpp-plugin-MovingHeadTest</a>
+    <a href="https://github.com/heffneil/fpp-movingheads">github.com/heffneil/fpp-movingheads</a>
   </p>
 </div>

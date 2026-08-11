@@ -1,6 +1,6 @@
 <?php
 /**
- * fpp-plugin-MovingHeadTest - Status/Control page.
+ * fpp-movingheads - Status/Control page.
  *
  * Included by FPP's plugin.php inside the usual header/menu/footer, so
  * $settings and the FPP setting helpers are already available and this file

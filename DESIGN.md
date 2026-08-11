@@ -1,6 +1,7 @@
-# fpp-plugin-MovingHeadTest — Design
+# fpp-movingheads — Design
 
-**Status:** design agreed, not implemented.
+**Status:** implemented and running on hardware. Kept as the record of why the
+plugin is shaped the way it is; see the README for how to use it.
 **Date:** 2026-08-11
 **Target:** FPP v10 (script plugin; also expected to work on v9.5 — see Open Questions)
 
@@ -45,22 +46,21 @@ is a config upload that sets a restart flag, not a data path.
 
 ### The live rig — VERIFIED
 
-Show folder: `/Users/neilheuer/Library/CloudStorage/Dropbox/Xlights/Xmas-2026`
+Show folder: `<show folder>`
 (`xlights_rgbeffects.xml`, 4.5 MB, 467 models, saved 2026-08-11 07:21). **Two** DMX
 models, both `DmxMovingHeadAdv`, both 16 channels:
 
 | Model | `StartChannel` | Form | Zones | Port / addr |
 |---|---|---|---|---|
-| MH1 | `!Kulp32-FPP-32-2025-3:1` | controller-relative | 2 | 1 / 1 |
+| MH1 | `!Kulp32-A:1` | controller-relative | 2 | 1 / 1 |
 | MH2 | `295200` | **absolute** | 1 | — / — |
 
 - **`StartChannel` has two forms and the parser MUST handle both.** `!Name:N` is
   controller-relative and needs a base; a bare integer is already absolute and needs none.
   MH2 also has no `ControllerConnection` element at all.
 - MH1 matches the exported `MH1.xmodel` exactly, so that export is valid live test data.
-- Target controller: `Kulp32-FPP-32-2025-3`, a KulpLights **K32-Max** at **172.16.0.59**
-  over DDP, `MaxChannels=12466`, described "Kulp In Middle of Front Yard". It is an
-  outdoor controller and was powered off when probed on 2026-08-11.
+- Target controller: `Kulp32-A`, a KulpLights **K32-Max** at **<controller-ip>**
+  over DDP, `MaxChannels=12466`. It is an outdoor controller.
 
 ### Why the controller base is user-entered — VERIFIED
 
@@ -71,12 +71,12 @@ controller ordering and sizes. Auto-resolving a base would mean reimplementing t
 allocation — rejected as fragile.
 
 A better future path exists and is untried: FPP's own `config/channeloutputs.json` on the
-show player holds the DDP output for `172.16.0.59` with its `startChannel`, which is
+show player holds the DDP output for `<controller-ip>` with its `startChannel`, which is
 authoritative for the machine actually emitting the channels.
 
 ### Additional test data — an archived show (20 moving heads)
 
-`/Users/neilheuer/Desktop/Desktop/xlights_rgbeffects.xml` — 3.1 MB, 155 models,
+an older archived show file — 3.1 MB, 155 models,
 **last modified 2026-03-27**, sitting beside archived model-mapping spreadsheets. **Not
 the live rig** — it predates it and contains a different, more varied set: 8 fixtures of
 9 channels and 12 of 16, none with zones, none with `DmxChannelCount`. Retained purely
@@ -119,14 +119,14 @@ Two fixture types, both `DmxMovingHeadAdv`, controller `Moving Heads`, `DMX-Open
 Resolution depends on which `StartChannel` form a model uses:
 
 - **Bare integer** (MH2 = `295200`) → already absolute. Used as-is, no base required.
-- **`!Controller:N`** (MH1 = `!Kulp32-FPP-32-2025-3:1`) → one **base channel per
+- **`!Controller:N`** (MH1 = `!Kulp32-A:1`) → one **base channel per
   controller name**, not per fixture:
 
 ```
 absolute = controllerBase + N − 1
 ```
 
-So MH2 needs no configuration at all, while MH1 needs the `Kulp32-FPP-32-2025-3` base set
+So MH2 needs no configuration at all, while MH1 needs the `Kulp32-A` base set
 once. Bases default to 1 and are editable per controller name; each fixture additionally
 gets an optional manual absolute override.
 
@@ -242,7 +242,7 @@ normal, not an error.
    16-bit motors, 2 zones, `DmxChannelCount` present) and the 20 show-file models
    (9 and 16 ch, no zones, `DmxChannelCount` absent, one omitted `channel` attribute).
    Named cases that must be covered, from the live show: MH1 relative
-   `!Kulp32-FPP-32-2025-3:1` with 2 zones; MH2 **absolute** `295200` with no
+   `!Kulp32-A:1` with 2 zones; MH2 **absolute** `295200` with no
    `ControllerConnection` element at all. From the archive: MH-1 empty labels at 5–6;
    MH2-1 `DmxDimmerChannel="0"` contradicting its "Dimmer" label; MH2-1 missing
    `DmxShutterOnValue`; MH6-1 omitted `ControllerConnection channel`; `DmxChannelCount`

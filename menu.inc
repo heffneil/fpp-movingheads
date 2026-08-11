@@ -1,6 +1,6 @@
 <?php
 
-# Menu entries for fpp-plugin-MovingHeadTest.
+# Menu entries for fpp-movingheads.
 #
 # PLUGIN_GUIDELINES.md #9.1 allows at most one entry per menu area, so the
 # tool lives under 'status' (beside FPP's own Display Testing, which is also

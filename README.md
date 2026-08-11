@@ -1,4 +1,4 @@
-# fpp-plugin-MovingHeadTest
+# fpp-movingheads
 
 Import xLights DMX moving-head models into FPP and drive one fixture live from a
 browser, to check it is addressed correctly and that every channel does what the
@@ -37,7 +37,7 @@ xLights writes `StartChannel` two ways, and both turn up in real show files:
 | Form | Example | Needs |
 |---|---|---|
 | absolute | `295200` | nothing |
-| controller-relative | `!Kulp32-FPP-32-2025-3:1` | one base per controller |
+| controller-relative | `!Kulp32-A:1` | one base per controller |
 
 A relative address cannot be resolved from the model file alone: the absolute
 origin lives in the channel-output configuration of the FPP instance that emits
