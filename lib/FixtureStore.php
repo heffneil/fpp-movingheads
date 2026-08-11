@@ -12,7 +12,7 @@
 
 class FixtureStore
 {
-    const REPO = 'fpp-plugin-MovingHeadTest';
+    const REPO = 'fpp-movingheads';
 
     private static function dataDir(): string
     {

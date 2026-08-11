@@ -30,14 +30,23 @@ function WriteSettingToFile($n, $v, $p = '') {
 require $ROOT . '/lib/XmodelParser.php';
 require $ROOT . '/lib/FixtureStore.php';
 
-$src = $argv[1] ?? '/Users/neilheuer/Desktop/MH1.xmodel';
+if ($argc < 2) {
+    fwrite(STDERR, "usage: php harness/seed.php <file.xmodel|xlights_rgbeffects.xml> [controllerName] [baseChannel]\n");
+    exit(1);
+}
+$src = $argv[1];
 $r = XmodelParser::parse(file_get_contents($src));
 $m = FixtureStore::merge($r['fixtures']);
 printf("imported %s: %d new, %d updated\n", basename($src), $m['added'], $m['replaced']);
 foreach ($r['errors'] as $e) echo "  ERR: $e\n";
 
-// the base the K32-Max actually reports for its DMX-Open output
-FixtureStore::setBase('Kulp32-FPP-32-2025-3', 109433);
+// Optional: a controller base, so relative-addressed fixtures resolve. Find the
+// real value on the emitting device with:
+//   curl -s http://<device>/api/channel/output/co-other
+if ($argc >= 4) {
+    FixtureStore::setBase($argv[2], (int) $argv[3]);
+    printf("base for %s set to %d\n", $argv[2], (int) $argv[3]);
+}
 foreach (FixtureStore::fixtures() as $f) {
     printf("  %-8s %2d ch  -> %s\n", $f['name'], $f['channelCount'],
         FixtureStore::absoluteStart($f) ?? 'unresolved');
