@@ -93,6 +93,17 @@ echo "<style>body{font:14px system-ui;margin:18px;background:#15161a;color:#e7e8
 echo "input,select,button{font:inherit}.alert{padding:7px 10px;border-radius:6px;margin:6px 0}";
 echo ".alert-info{background:#1d3a52}.alert-danger{background:#4a2020}";
 echo "h2,h3{font-weight:500}code,pre{font-family:ui-monospace,Menlo,monospace}</style>";
+
+// Mirror plugin.php: it auto-includes every file in the plugin's js/ and css/
+// into the head, and status.php deliberately emits neither. Inlining them here
+// keeps the harness faithful to how the page is actually assembled on a device.
+echo "<style>";
+readfile($ROOT . '/css/movingheadtest.css');
+echo "</style>";
+echo "<script>";
+readfile($ROOT . '/js/movingheadtest.js');
+echo "</script>";
+
 echo "</head><body>";
 include $ROOT . '/status.php';
 echo "</body></html>";

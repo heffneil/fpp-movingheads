@@ -5,7 +5,15 @@
  */
 
 .mhtWrap { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
-.mhtCol { flex: 1; min-width: 320px; }
+
+/* min-width:0 is load-bearing. A flex item defaults to min-width:auto, which
+   refuses to shrink below its content, so the column grew to fit the widest
+   row and pushed the whole page into horizontal scroll. flex-basis carries the
+   preferred width instead, and the column now shrinks and wraps under the
+   radar on a narrow screen - which matters, since aiming a head from a phone
+   in the yard is a real use of this page. */
+.mhtCol { flex: 1 1 340px; min-width: 0; }
+#mhtRadarWrap { flex: 0 1 auto; max-width: 300px; min-width: 0; }
 
 .mhtBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .mhtBar .mhtGrow { flex: 1; }
@@ -14,12 +22,34 @@
 .mhtLive { color: #2e8b57; }
 .mhtOff  { color: #b04a44; }
 
-.mhtRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+/* wrap, don't clip: the shutter row carries two extra buttons and would push
+   its value field off the edge on a narrow screen. Wrapping degrades to a
+   second line instead of hiding the control. */
+.mhtRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .mhtRowTop { align-items: flex-start; }
-.mhtRow label { min-width: 108px; margin: 0; font-size: 13px; }
-.mhtRow input[type=range] { flex: 1; min-width: 90px; }
-.mhtRow button { padding: 2px 11px; font-size: 12px; }
-.mhtVal { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+/* The label may shrink and ellipsize; the channel number and the editable value
+   must not, since both are the point of the row. */
+.mhtRow label {
+  flex: 0 1 108px; min-width: 62px; margin: 0; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mhtRow input[type=range] { flex: 1 1 60px; min-width: 50px; }
+.mhtRow input.mhtVal { flex: 0 0 auto; }
+.mhtCh { flex: 0 0 auto; }
+.mhtRow button { padding: 2px 9px; font-size: 12px; flex: 0 0 auto; }
+/* The readout is an editable number, not a label: dragging cannot express
+   "channel 11 = exactly 137". Spinners are hidden because the arrows are
+   useless at this size and steal width from the digits. */
+input.mhtVal {
+  width: 58px; min-width: 58px; text-align: right; font-size: 13px;
+  font-variant-numeric: tabular-nums; padding: 2px 4px;
+  background: transparent; color: inherit;
+  border: 1px solid rgba(128,128,128,.35); border-radius: 4px;
+}
+input.mhtVal:focus { border-color: #3b82f6; outline: none; }
+input.mhtVal::-webkit-outer-spin-button,
+input.mhtVal::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.mhtVal { -moz-appearance: textfield; appearance: textfield; }
 .mhtCh { min-width: 58px; font-family: monospace; font-size: 11px; opacity: .6; }
 .mhtMuted { opacity: .72; }
 
@@ -29,7 +59,17 @@
 
 .mhtReadout { display: flex; gap: 26px; margin-bottom: 12px; flex-wrap: wrap; }
 .mhtReadout .mhtK { font-size: 12px; opacity: .7; }
-.mhtReadout .mhtBig { font-size: 21px; font-variant-numeric: tabular-nums; }
+.mhtBigWrap { display: flex; align-items: baseline; gap: 1px; }
+.mhtReadout .mhtDeg { font-size: 17px; opacity: .65; }
+input.mhtBig {
+  width: 76px; font-size: 21px; font-variant-numeric: tabular-nums;
+  text-align: right; padding: 0 2px; background: transparent; color: inherit;
+  border: 0; border-bottom: 1px solid rgba(128,128,128,.35);
+}
+input.mhtBig:focus { border-bottom-color: #3b82f6; outline: none; }
+input.mhtBig::-webkit-outer-spin-button,
+input.mhtBig::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtReadout .mhtRaw { font-family: monospace; font-size: 11px; opacity: .6; }
 
 .mhtRadar { touch-action: none; cursor: crosshair; max-width: 300px; height: auto; }
@@ -40,7 +80,15 @@
 .mhtDot { fill: #3b82f6; }
 .mhtRay { stroke: #3b82f6; stroke-width: 1.4; }
 
-.mhtFieldset { border: 1px solid rgba(128,128,128,.32); border-radius: 7px; padding: 9px 12px; margin: 0 0 12px; }
+/* min-width:0 is required here, not cosmetic. Browsers give <fieldset> a UA
+   default of min-width:min-content - unique to fieldset, no other block behaves
+   this way - so it refuses to shrink below its widest row and overflows its
+   parent column no matter how the flex above it is set up. */
+.mhtFieldset {
+  border: 1px solid rgba(128,128,128,.32); border-radius: 7px;
+  padding: 9px 12px; margin: 0 0 12px;
+  min-width: 0;
+}
 .mhtFieldset legend { font-size: 12px; opacity: .7; padding: 0 5px; width: auto; margin: 0; border: 0; }
 
 .mhtNote { font-size: 12px; opacity: .65; }

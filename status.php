@@ -197,12 +197,16 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       <div class="mhtReadout">
         <div id="mhtPanWrap">
           <div class="mhtK">Pan</div>
-          <div class="mhtBig" id="mhtPanDeg">0&deg;</div>
+          <div class="mhtBigWrap">
+            <input type="number" class="mhtBig" id="mhtPanDeg" step="1" value="0"><span class="mhtDeg">&deg;</span>
+          </div>
           <div class="mhtRaw" id="mhtPanRaw">&mdash;</div>
         </div>
         <div id="mhtTiltWrap">
           <div class="mhtK">Tilt</div>
-          <div class="mhtBig" id="mhtTiltDeg">0&deg;</div>
+          <div class="mhtBigWrap">
+            <input type="number" class="mhtBig" id="mhtTiltDeg" step="1" value="0"><span class="mhtDeg">&deg;</span>
+          </div>
           <div class="mhtRaw" id="mhtTiltRaw">&mdash;</div>
         </div>
       </div>
