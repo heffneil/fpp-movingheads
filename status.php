@@ -6,11 +6,16 @@
  * $settings and the FPP setting helpers are already available and this file
  * must not emit <html> or <head>.
  *
- * Assets are inlined rather than linked: FPP's Apache DocumentRoot is
- * /opt/fpp/www with no Alias for the plugins directory, so a plugin's own
- * js/ and css/ files are not reachable over HTTP. Keeping them as separate
- * files on disk and emitting them here gets maintainable sources without a
- * URL that does not exist.
+ * This file deliberately does NOT emit its own <script> or <style> for the
+ * plugin's assets. Apache's DocumentRoot is /opt/fpp/www with no alias for the
+ * plugins directory, but plugin.php proxies plugin files anyway and auto-
+ * includes every entry in js/ and css/ into the page head:
+ *
+ *     plugin.php?plugin=<repoName>&file=js/<name>&nopage=1
+ *
+ * Inlining them here as well would load the runtime twice, so init() would run
+ * twice and every control would end up with two listeners and two conflicting
+ * state closures.
  */
 
 require_once __DIR__ . '/lib/XmodelParser.php';
@@ -81,8 +86,6 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     return empty($f['absoluteStart']);
 }));
 ?>
-<style><?php readfile(__DIR__ . '/css/movingheadtest.css'); ?></style>
-
 <div class="container-fluid">
   <h2>Moving Head Test</h2>
 
@@ -266,6 +269,5 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   </fieldset>
 
   <script>window.MHT_FIXTURES = <?php echo json_encode($ready, JSON_UNESCAPED_SLASHES); ?>;</script>
-  <script><?php readfile(__DIR__ . '/js/movingheadtest.js'); ?></script>
   <?php endif; ?>
 </div>

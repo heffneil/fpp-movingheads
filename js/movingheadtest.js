@@ -404,6 +404,12 @@ var MHT = (function () {
     }
 
     function init() {
+        // plugin.php auto-includes this file on every render of any page in the
+        // plugin, including status.php with no fixtures imported yet and
+        // about.php. Bail out quietly when the tool's DOM is not present rather
+        // than throwing on a null element.
+        if (!$('mhtRadar') || !$('mhtTake')) { return; }
+
         var sel = $('mhtFixture');
         if (sel) {
             sel.addEventListener('change', function () { selectFixture(sel.value); });
