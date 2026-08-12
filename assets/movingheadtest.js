@@ -29,7 +29,6 @@ var MHT = (function () {
     var dragging = false;
     var panDeg = 0, tiltDeg = 0;
     var honorZones = true;
-    var polar = false;
     var dimmerInput = null;   // held so the quick commands can move the control
     var shutterInput = null;
     var rawInputs = {};       // channel offset -> its range input
@@ -115,17 +114,16 @@ var MHT = (function () {
     }
 
     // Inverse of the pointer mapping: put the dot where the current angles say.
+    //
+    // Horizontal is pan, vertical is tilt. A bearing-and-radius ("polar") mode
+    // used to be offered here and was removed: radius is a magnitude, so it
+    // could only ever reach positive tilt - the bottom half of the pad simply
+    // duplicated the top - and dead center was degenerate, with atan2(0, -0)
+    // snapping pan to 180. The rings and bearing labels give the radar look
+    // without costing half the tilt range.
     function placeDot() {
-        var dx, dy;
-        if (polar) {
-            var a = panDeg * Math.PI / 180;
-            var r = (Math.abs(tiltDeg) / tiltLimit()) * R;
-            dx = Math.sin(a) * r;
-            dy = -Math.cos(a) * r;
-        } else {
-            dx = (panDeg / panLimit()) * R;
-            dy = -(tiltDeg / tiltLimit()) * R;
-        }
+        var dx = (panDeg / panLimit()) * R;
+        var dy = -(tiltDeg / tiltLimit()) * R;
         $('mhtDot').setAttribute('cx', C + dx);
         $('mhtDot').setAttribute('cy', C + dy);
         $('mhtRay').setAttribute('x2', C + dx);
@@ -365,11 +363,7 @@ var MHT = (function () {
         var dx = x - C, dy = y - C;
         var d = Math.hypot(dx, dy);
         if (d > R) { dx *= R / d; dy *= R / d; }
-        if (polar) {
-            setAim(Math.atan2(dx, -dy) * 180 / Math.PI, (Math.hypot(dx, dy) / R) * tiltLimit());
-        } else {
-            setAim((dx / R) * panLimit(), -(dy / R) * tiltLimit());
-        }
+        setAim((dx / R) * panLimit(), -(dy / R) * tiltLimit());
     }
 
     function center() { setAim(0, 0); }
@@ -548,7 +542,7 @@ var MHT = (function () {
                 c.disabled = !on;
             });
         });
-        ['mhtCenter', 'mhtLampOn', 'mhtLampOff', 'mhtLightOn', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
+        ['mhtCenter', 'mhtLampOn', 'mhtLampOff', 'mhtLightOn', 'mhtBlackout', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
             var el = $(id);
             if (el) { el.disabled = !on; }
         });
@@ -682,10 +676,6 @@ var MHT = (function () {
         if (z) {
             z.addEventListener('change', function () { honorZones = z.checked; flush(); });
         }
-        var p = $('mhtPolar');
-        if (p) {
-            p.addEventListener('change', function () { polar = p.checked; center(); });
-        }
 
         // Typed angles. setAim() clamps to the motor's own range of motion, so
         // an out-of-range entry lands at the limit rather than being rejected;
@@ -713,7 +703,13 @@ var MHT = (function () {
         svg.addEventListener('pointerdown', function (e) {
             if (!live) { return; }
             dragging = true;
-            svg.setPointerCapture(e.pointerId);
+            // Capture keeps the drag alive if the pointer leaves the pad, but it
+            // is not essential - and it throws NotFoundError for a pointer id it
+            // does not recognise. Uncaught, that abandons the handler before the
+            // fixture is ever aimed, so the whole gesture silently does nothing.
+            try {
+                svg.setPointerCapture(e.pointerId);
+            } catch (err) { /* drag still works, just not outside the pad */ }
             radarPoint(e);
         });
         svg.addEventListener('pointermove', function (e) {

@@ -245,9 +245,6 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </svg>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
-        <label style="min-width:auto;display:inline-flex;align-items:center;gap:5px">
-          <input type="checkbox" id="mhtPolar"> Polar
-        </label>
       </div>
     </div>
 
