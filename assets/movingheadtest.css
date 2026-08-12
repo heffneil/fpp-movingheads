@@ -72,18 +72,16 @@ input.mhtBig::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtReadout .mhtRaw { font-family: monospace; font-size: 11px; opacity: .6; }
 
-.mhtRadar { touch-action: none; cursor: crosshair; max-width: 300px; height: auto; }
-.mhtRadarBg { fill: none; stroke: currentColor; opacity: .28; }
-.mhtRadarRing { fill: none; stroke: currentColor; opacity: .14; }
-.mhtRadarAxis { stroke: currentColor; opacity: .14; }
+.mhtRadar { touch-action: none; cursor: crosshair; width: 100%; max-width: 340px; height: auto; }
+.mhtPadBg { fill: none; stroke: currentColor; stroke-opacity: .45; }
+.mhtPadGrid { stroke: currentColor; stroke-opacity: .16; }
+/* tilt 0 gets a stronger line, pan 0 a colored one - the two references you
+   aim relative to, and the reason the grid is readable at a glance */
+.mhtPadAxis { stroke: currentColor; stroke-opacity: .42; }
+.mhtPadZero { stroke: #e2645a; stroke-opacity: .85; }
+.mhtMark { fill: none; stroke: #e2645a; stroke-width: 2; }
 .mhtRadarTick { font-size: 10px; fill: currentColor; opacity: .5; }
-.mhtDot { fill: #3b82f6; }
-.mhtRay { stroke: #3b82f6; stroke-width: 1.4; }
 
-/* min-width:0 is required here, not cosmetic. Browsers give <fieldset> a UA
-   default of min-width:min-content - unique to fieldset, no other block behaves
-   this way - so it refuses to shrink below its widest row and overflows its
-   parent column no matter how the flex above it is set up. */
 .mhtFieldset {
   border: 1px solid rgba(128,128,128,.32); border-radius: 7px;
   padding: 9px 12px; margin: 0 0 12px;

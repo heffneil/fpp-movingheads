@@ -32,7 +32,10 @@ var MHT = (function () {
     var dimmerInput = null;   // held so the quick commands can move the control
     var shutterInput = null;
     var rawInputs = {};       // channel offset -> its range input
-    var R = 144, C = 150;     // radar geometry, in the 300x300 viewBox
+    // Pad geometry, recomputed per fixture. CELL is degrees per grid block;
+    // PX is its size in viewBox units, so cells stay square whatever the ranges.
+    var CELL = 45, PX = 40;
+    var padW = 320, padH = 240, padCX = 160, padCY = 120;
 
     // Password managers latch onto bare number inputs and pop their autofill UI
     // over a field that is just a DMX value. Each vendor honors its own opt-out;
@@ -128,21 +131,66 @@ var MHT = (function () {
         flush();
     }
 
-    // Inverse of the pointer mapping: put the dot where the current angles say.
-    //
-    // Horizontal is pan, vertical is tilt. A bearing-and-radius ("polar") mode
-    // used to be offered here and was removed: radius is a magnitude, so it
-    // could only ever reach positive tilt - the bottom half of the pad simply
-    // duplicated the top - and dead center was degenerate, with atan2(0, -0)
-    // snapping pan to 180. The rings and bearing labels give the radar look
-    // without costing half the tilt range.
+    /**
+     * Build the aim grid for the current fixture.
+     *
+     * One block per CELL degrees in both axes, sized so blocks are square. The
+     * extent comes from the fixture's own range of motion, so a 540/270 head
+     * gets 8 x 6 blocks and something else gets whatever its ranges imply.
+     *
+     * Rectangular, not circular. The old round pad clamped the pointer to a
+     * radius, which made the corners unreachable - pan 180 together with tilt
+     * 135 could not be expressed at all.
+     */
+    function buildPad() {
+        var svg = $('mhtRadar');
+        if (!svg || !fx) { return; }
+        var cols = Math.max(2, Math.round((panLimit() * 2) / CELL));
+        var rows = Math.max(2, Math.round((tiltLimit() * 2) / CELL));
+        padW = cols * PX;
+        padH = rows * PX;
+        padCX = padW / 2;
+        padCY = padH / 2;
+        svg.setAttribute('viewBox', '0 0 ' + padW + ' ' + padH);
+
+        var p = [];
+        p.push('<rect class="mhtPadBg" x="0.5" y="0.5" width="' + (padW - 1) +
+               '" height="' + (padH - 1) + '"/>');
+        for (var c = 1; c < cols; c++) {
+            p.push('<line class="mhtPadGrid" x1="' + (c * PX) + '" y1="0" x2="' +
+                   (c * PX) + '" y2="' + padH + '"/>');
+        }
+        for (var r = 1; r < rows; r++) {
+            p.push('<line class="mhtPadGrid" x1="0" y1="' + (r * PX) + '" x2="' +
+                   padW + '" y2="' + (r * PX) + '"/>');
+        }
+        // tilt 0 and pan 0 references, drawn over the grid
+        p.push('<line class="mhtPadAxis" x1="0" y1="' + padCY + '" x2="' + padW +
+               '" y2="' + padCY + '"/>');
+        p.push('<line class="mhtPadZero" x1="' + padCX + '" y1="0" x2="' + padCX +
+               '" y2="' + padH + '"/>');
+
+        p.push('<text class="mhtRadarDir"  x="' + padCX + '" y="14" text-anchor="middle">BACK</text>');
+        p.push('<text class="mhtRadarTick" x="' + padCX + '" y="26" text-anchor="middle">tilt +</text>');
+        p.push('<text class="mhtRadarTick" x="' + padCX + '" y="' + (padH - 16) + '" text-anchor="middle">tilt \u2212</text>');
+        p.push('<text class="mhtRadarDir"  x="' + padCX + '" y="' + (padH - 5) + '" text-anchor="middle">FRONT</text>');
+        p.push('<text class="mhtRadarTick" x="' + (padW - 4) + '" y="' + (padCY - 6) + '" text-anchor="end">pan +</text>');
+        p.push('<text class="mhtRadarTick" x="4" y="' + (padCY - 6) + '">pan \u2212</text>');
+        p.push('<text class="mhtRadarTick" x="4" y="12">' + CELL + '\u00b0 per block</text>');
+
+        p.push('<rect class="mhtMark" id="mhtDot" x="0" y="0" width="13" height="13"/>');
+        svg.innerHTML = p.join('');
+        placeDot();
+    }
+
+    // Put the marker where the current angles say.
     function placeDot() {
-        var dx = (panDeg / panLimit()) * R;
-        var dy = -(tiltDeg / tiltLimit()) * R;
-        $('mhtDot').setAttribute('cx', C + dx);
-        $('mhtDot').setAttribute('cy', C + dy);
-        $('mhtRay').setAttribute('x2', C + dx);
-        $('mhtRay').setAttribute('y2', C + dy);
+        var m = $('mhtDot');
+        if (!m) { return; }
+        var x = padCX + (panDeg / panLimit()) * padCX;
+        var y = padCY - (tiltDeg / tiltLimit()) * padCY;
+        m.setAttribute('x', x - 6.5);
+        m.setAttribute('y', y - 6.5);
     }
 
     /* ---------------------------------------------------------------- Zones */
@@ -436,12 +484,11 @@ var MHT = (function () {
     function radarPoint(e) {
         var svg = $('mhtRadar');
         var b = svg.getBoundingClientRect();
-        var x = (e.clientX - b.left) / b.width * 300;
-        var y = (e.clientY - b.top) / b.height * 300;
-        var dx = x - C, dy = y - C;
-        var d = Math.hypot(dx, dy);
-        if (d > R) { dx *= R / d; dy *= R / d; }
-        setAim((dx / R) * panLimit(), -(dy / R) * tiltLimit());
+        var x = (e.clientX - b.left) / b.width * padW;
+        var y = (e.clientY - b.top) / b.height * padH;
+        // clamped per axis, so every corner of the range is reachable
+        setAim(((x - padCX) / padCX) * panLimit(),
+               -((y - padCY) / padCY) * tiltLimit());
     }
 
     function center() { setAim(0, 0); }
@@ -662,7 +709,7 @@ var MHT = (function () {
             if (fx.tilt) { tiltDeg = degFrom16(vals, fx.tilt); }
         }
         buildSurface();
-        placeDot();
+        buildPad();
         recompute();
         setControlsEnabled(false);
         if (restored) { log('Restored last known position for ' + fx.name); }
