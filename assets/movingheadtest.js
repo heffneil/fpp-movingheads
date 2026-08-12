@@ -434,16 +434,11 @@ var MHT = (function () {
         shutterInput = null;
         rawInputs = {};
 
-        // Order is Lamp, Dimmer, Shutter, Color: the lamp has to be lit before
-        // the dimmer means anything, and the dimmer before the shutter does.
-        if (fx.lamp) {
-            var lr = row(base + fx.lamp.channel - 1, 'Lamp', vals[fx.lamp.channel] || 0, 255, function (v) {
-                vals[fx.lamp.channel] = v; flush();
-            });
-            rawInputs[fx.lamp.channel] = lr.querySelector('input[type=range]');
-            sem.appendChild(lr);
-        }
-
+        // The lamp channel is deliberately NOT here. This group is what the model
+        // itself declares; lamp control is config entered in this plugin, so its
+        // slider lives with the other raw channels and only the Lamp On/Off
+        // shortcuts appear in Quick Commands. Putting it here made the group's
+        // own heading untrue.
         if (fx.dimmer) {
             var dr = row(base + fx.dimmer - 1, 'Dimmer', vals[fx.dimmer] || 0, 255, function (v) {
                 vals[fx.dimmer] = v; flush();
@@ -493,8 +488,6 @@ var MHT = (function () {
         var any = false;
         for (var o = 1; o <= fx.channelCount; o++) {
             if (fx.roles[o] !== 'raw') { continue; }
-            // shown as Lamp above; not repeated here
-            if (fx.lamp && o === fx.lamp.channel) { continue; }
             any = true;
             (function (off) {
                 var r = row(base + off - 1, fx.labels[off] || ('Channel ' + off),
