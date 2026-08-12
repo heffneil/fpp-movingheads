@@ -332,7 +332,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   <fieldset class="mhtFieldset">
     <legend>Registered Fixtures</legend>
     <table class="mhtTable">
-      <tr><th>Fixture</th><th>Type</th><th>Ch</th><th>Absolute</th><th>On the Wire</th><th>Source</th><th></th></tr>
+      <tr><th>Fixture</th><th>Type</th><th>Ch</th><th>Absolute</th><th>On the Wire</th><th>Source</th><th>Set Absolute</th><th></th></tr>
       <?php foreach ($resolved as $f): ?>
         <tr>
           <td><?php echo htmlspecialchars($f['name']); ?></td>
@@ -362,6 +362,18 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                 echo 'unknown';
             }
             ?>
+          </td>
+          <td>
+            <form method="post" style="display:inline-flex;gap:5px">
+              <input type="hidden" name="mhtAction" value="override">
+              <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+              <input type="number" name="absolute" min="1" step="1" style="width:96px"
+                     placeholder="derived"
+                     value="<?php echo isset($f['override']) ? (int) $f['override'] : ''; ?>"
+                     title="Overrides the address derived from the model. Blank uses the derived one."
+                     autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+              <button type="submit" class="buttons">Save</button>
+            </form>
           </td>
           <td>
             <form method="post" onsubmit="return confirm('Remove <?php echo htmlspecialchars($f['name']); ?>?')">
