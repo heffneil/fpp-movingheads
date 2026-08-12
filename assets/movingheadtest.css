@@ -102,3 +102,27 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtTable td, .mhtTable th { padding: 3px 12px 3px 0; text-align: left; font-weight: normal; }
 .mhtTable th { font-size: 11px; opacity: .6; }
 .mhtWarn { color: #b04a44; font-size: 12px; }
+
+/* Until Take control, the pad is not operable. Blocking pointer events is the
+   visible half; the pointerdown handler also checks, so behavior never depends
+   on styling alone. */
+.mhtRadar.mhtInert { pointer-events: none; cursor: default; }
+.mhtDimmed { opacity: .45; }
+
+/* Take-control mask. The controls are disabled in code too - this is the half
+   that explains why, rather than leaving a dead-looking panel. Grey via rgba so
+   it reads correctly against FPP's light and dark themes alike. */
+.mhtStage { position: relative; }
+.mhtMask {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(128, 128, 128, .28);
+  backdrop-filter: blur(1.5px);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.mhtMask[hidden] { display: none; }
+.mhtMaskInner { text-align: center; padding: 16px 22px; border-radius: 8px;
+                background: rgba(20, 20, 20, .62); }
+.mhtMaskInner button { font-size: 15px; padding: 7px 20px; }
+.mhtMaskNote { margin-top: 8px; font-size: 12px; color: #d8d9db; }

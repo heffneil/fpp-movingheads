@@ -230,17 +230,13 @@ var MHT = (function () {
     }
 
     /**
-     * Kill the light NOW - dimmer and shutter to zero.
+     * Kill the light - dimmer and shutter to zero.
      *
-     * Deliberately does NOT go through flush(), which returns early unless the
-     * page is "in control". That gate is right for ordinary edits and wrong
-     * here: the moment you most need a blackout is when a fixture is still lit
-     * from ranges held by a previous session and you have not taken control,
-     * which is exactly when flush() would have silently done nothing.
-     *
-     * It also does not take control first, because that would assert every
-     * channel including pan and tilt - a blackout should stop light, not move
-     * the head.
+     * Like every other control, this does nothing until the page is in control.
+     * That is deliberate: the tool asserts a known state on take-control and
+     * nothing before it, so there is never a question of which values a fixture
+     * is holding or who put them there. The controls are visibly disabled until
+     * then, so this cannot be pressed and silently ignored.
      *
      * Note this is a blackout, not a lamp off: it does not touch a lamp-control
      * channel (often labelled "Lamp" or "Lamp / Reset"), which on many fixtures
@@ -248,7 +244,7 @@ var MHT = (function () {
      * casually. Use that channel's own slider if you really mean it.
      */
     function blackout() {
-        if (!fx) { return; }
+        if (!fx || !live) { return; }
         var parts = [];
         if (fx.dimmer) {
             vals[fx.dimmer] = 0;
@@ -282,6 +278,7 @@ var MHT = (function () {
         for (var i = 0; i <= fx.channelCount; i++) { sent[i] = -1; }
         $('mhtState').textContent = 'in control';
         $('mhtState').className = 'mhtPill mhtLive';
+        setControlsEnabled(true);
         log('--- took control of ' + fx.name + ' at ' + base + '-' + (base + fx.channelCount - 1));
         flush();
     }
@@ -311,6 +308,7 @@ var MHT = (function () {
         live = false;
         $('mhtState').textContent = 'released';
         $('mhtState').className = 'mhtPill mhtOff';
+        setControlsEnabled(false);
         put(releasePath());
     }
 
@@ -516,6 +514,37 @@ var MHT = (function () {
 
     /* ----------------------------------------------------------------- init */
 
+    /**
+     * Nothing is operable until Take control. The controls were previously live
+     * to the eye but inert in code - pressing one silently did nothing, which is
+     * indistinguishable from a broken tool. Disabling them makes the state
+     * obvious, and means every value a fixture holds was put there deliberately
+     * after taking control.
+     *
+     * The fixture selector and Take control itself stay enabled, for obvious
+     * reasons.
+     */
+    function setControlsEnabled(on) {
+        var scopes = ['mhtSemantic', 'mhtRaw'];
+        scopes.forEach(function (id) {
+            var el = $(id);
+            if (!el) { return; }
+            el.querySelectorAll('input, button, select').forEach(function (c) {
+                c.disabled = !on;
+            });
+        });
+        ['mhtCenter', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
+            var el = $(id);
+            if (el) { el.disabled = !on; }
+        });
+        var pad = $('mhtRadar');
+        if (pad) { pad.classList.toggle('mhtInert', !on); }
+        var wrap = $('mhtRadarWrap');
+        if (wrap) { wrap.classList.toggle('mhtDimmed', !on); }
+        var mask = $('mhtMask');
+        if (mask) { mask.hidden = on; }
+    }
+
     function selectFixture(name) {
         var list = window.MHT_FIXTURES || [];
         fx = null;
@@ -532,6 +561,7 @@ var MHT = (function () {
         buildSurface();
         recompute();
         setAim(0, 0);
+        setControlsEnabled(false);
         $('mhtRange').textContent = base
             ? (base + ' – ' + (base + fx.channelCount - 1))
             : 'no absolute channel - set a controller base';
@@ -551,6 +581,15 @@ var MHT = (function () {
             sel.addEventListener('change', function () { selectFixture(sel.value); });
         }
         $('mhtTake').addEventListener('click', takeControl);
+        // the mask is the obvious thing to click when it is covering everything
+        var maskBtn = $('mhtMaskBtn');
+        if (maskBtn) { maskBtn.addEventListener('click', takeControl); }
+        var mask = $('mhtMask');
+        if (mask) {
+            mask.addEventListener('click', function (e) {
+                if (e.target === mask) { takeControl(); }
+            });
+        }
         $('mhtRelease').addEventListener('click', release);
         $('mhtCenter').addEventListener('click', center);
         $('mhtBlackout').addEventListener('click', blackout);
@@ -587,6 +626,7 @@ var MHT = (function () {
 
         var svg = $('mhtRadar');
         svg.addEventListener('pointerdown', function (e) {
+            if (!live) { return; }
             dragging = true;
             svg.setPointerCapture(e.pointerId);
             radarPoint(e);
