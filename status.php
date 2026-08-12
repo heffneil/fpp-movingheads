@@ -114,19 +114,19 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   <?php endforeach; ?>
 
   <fieldset class="mhtFieldset">
-    <legend>import fixtures</legend>
+    <legend>Import Fixtures</legend>
     <form method="post" enctype="multipart/form-data" class="mhtImport">
       <input type="hidden" name="mhtAction" value="import">
       <input type="file" name="mhtFile" accept=".xmodel,.xml" required>
       <button type="submit" class="buttons">Import</button>
-      <span class="mhtNote">an exported <code>.xmodel</code>, or a whole
+      <span class="mhtNote">An exported <code>.xmodel</code>, or a whole
         <code>xlights_rgbeffects.xml</code> to pick up every DMX fixture at once</span>
     </form>
   </fieldset>
 
   <?php if ($unresolved): ?>
     <fieldset class="mhtFieldset">
-      <legend>needs an address</legend>
+      <legend>Needs an Address</legend>
       <p class="mhtNote">
         These fixtures use a controller-relative <code>StartChannel</code> and no base is set
         for their controller yet. A relative address cannot be resolved from the model file
@@ -135,7 +135,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <code>Input/Output Setup &rarr; Other</code> shows the DMX output's start channel.
       </p>
       <table class="mhtTable">
-        <tr><th>fixture</th><th>controller</th><th>offset</th><th>base</th></tr>
+        <tr><th>Fixture</th><th>Controller</th><th>Offset</th><th>Base</th></tr>
         <?php foreach ($unresolved as $f): ?>
           <tr>
             <td><?php echo htmlspecialchars($f['name']); ?></td>
@@ -167,7 +167,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
 
   <?php if ($notEmitted): ?>
     <fieldset class="mhtFieldset">
-      <legend>not driveable from this device</legend>
+      <legend>Not Driveable From This Device</legend>
       <p class="mhtNote">
         These fixtures have a valid absolute address, but it falls outside the channels this
         FPP instance actually puts on the wire (<?php echo htmlspecialchars(LocalOutputs::describe()); ?>).
@@ -175,7 +175,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         control. Drive them from the instance that emits their channels, or correct the address.
       </p>
       <table class="mhtTable">
-        <tr><th>fixture</th><th>channels</th><th>ch</th></tr>
+        <tr><th>Fixture</th><th>Channels</th><th>Ch</th></tr>
         <?php foreach ($notEmitted as $f): ?>
           <tr>
             <td><?php echo htmlspecialchars($f['name']); ?></td>
@@ -201,9 +201,9 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         </option>
       <?php endforeach; ?>
     </select>
-    <span class="mhtNote">channels <span id="mhtRange">&mdash;</span></span>
+    <span class="mhtNote">Channels <span id="mhtRange">&mdash;</span></span>
     <span class="mhtGrow"></span>
-    <span id="mhtState" class="mhtPill mhtOff">released</span>
+    <span id="mhtState" class="mhtPill mhtOff">Released</span>
     <button type="button" id="mhtTake" class="buttons">Take control</button>
     <button type="button" id="mhtRelease" class="buttons">Release</button>
   </div>
@@ -212,7 +212,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <div id="mhtMask" class="mhtMask">
       <div class="mhtMaskInner">
         <button type="button" id="mhtMaskBtn" class="buttons">Take control</button>
-        <div class="mhtMaskNote">nothing is sent to the fixture until you do</div>
+        <div class="mhtMaskNote">Nothing is sent to the fixture until you do</div>
       </div>
     </div>
   <div class="mhtWrap">
@@ -233,9 +233,10 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </svg>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
-        <button type="button" id="mhtBlackout" class="buttons" title="Dimmer and shutter to 0. Works even when not in control. Does not touch a lamp-control channel.">Blackout</button>
+        <button type="button" id="mhtLightOn" class="buttons" title="Shutter open and dimmer full. Does not touch a lamp-control channel.">Light On</button>
+        <button type="button" id="mhtBlackout" class="buttons" title="Dimmer and shutter to 0. Does not touch a lamp-control channel.">Light Off</button>
         <label style="min-width:auto;display:inline-flex;align-items:center;gap:5px">
-          <input type="checkbox" id="mhtPolar"> polar
+          <input type="checkbox" id="mhtPolar"> Polar
         </label>
       </div>
     </div>
@@ -259,19 +260,19 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </div>
 
       <fieldset class="mhtFieldset">
-        <legend>declared by the model</legend>
+        <legend>Declared by the Model</legend>
         <div id="mhtSemantic"></div>
       </fieldset>
 
       <fieldset class="mhtFieldset">
-        <legend>raw channels</legend>
+        <legend>Raw Channels</legend>
         <div id="mhtRaw"></div>
       </fieldset>
 
       <fieldset class="mhtFieldset" id="mhtZoneWrap">
-        <legend>position zones</legend>
+        <legend>Position Zones</legend>
         <label style="display:flex;align-items:center;gap:7px;font-size:13px">
-          <input type="checkbox" id="mhtHonor" checked> honor this model's PositionZone rules
+          <input type="checkbox" id="mhtHonor" checked> Honor this model's PositionZone rules
         </label>
         <div class="mhtNote" id="mhtZoneDesc"></div>
         <div id="mhtZoneState" class="mhtZoneOff">not in a zone</div>
@@ -282,14 +283,14 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   </div><!-- /mhtStage -->
 
   <fieldset class="mhtFieldset">
-    <legend>requests</legend>
-    <pre id="mhtLog">idle</pre>
+    <legend>Requests</legend>
+    <pre id="mhtLog">Idle</pre>
   </fieldset>
 
   <fieldset class="mhtFieldset">
-    <legend>registered fixtures</legend>
+    <legend>Registered Fixtures</legend>
     <table class="mhtTable">
-      <tr><th>fixture</th><th>type</th><th>ch</th><th>absolute</th><th>on the wire</th><th>source</th><th></th></tr>
+      <tr><th>Fixture</th><th>Type</th><th>Ch</th><th>Absolute</th><th>On the Wire</th><th>Source</th><th></th></tr>
       <?php foreach ($resolved as $f): ?>
         <tr>
           <td><?php echo htmlspecialchars($f['name']); ?></td>
