@@ -305,20 +305,67 @@ var MHT = (function () {
      * casually. Use that channel's own slider if you really mean it.
      */
 
+    // A lamp strike is a momentary command, not a level: the fixture latches on
+    // the transition, and a lamp/reset channel's value ranges usually mean
+    // something different when held. So the value is pulsed and then released
+    // back to idle rather than left sitting on the channel.
+    var LAMP_PULSE_MS = 5000;
+    var LAMP_IDLE = 0;
+    var lampTimer = null;
+
     /**
-     * Lamp strike / douse. Only available when the fixture has lamp config,
-     * because the channel and its two values are fixture-specific and are never
-     * guessed - the wrong value on an arc lamp is not a harmless mistake.
+     * Pulse the lamp channel: hold the configured value for LAMP_PULSE_MS, then
+     * return the channel to idle.
+     *
+     * Only available when the fixture has lamp config, because the channel and
+     * its values are fixture-specific and are never guessed - the wrong value on
+     * an arc lamp is not a harmless mistake.
      */
     function setLamp(on) {
         if (!fx || !live || !fx.lamp) { return; }
         var ch = fx.lamp.channel;
         var v = on ? fx.lamp.onValue : fx.lamp.offValue;
+
+        cancelLampPulse();
+        writeLampChannel(ch, v);
+        log('Lamp ' + (on ? 'on' : 'off') + ': ch' + ch + ' = ' + v +
+            ' for ' + (LAMP_PULSE_MS / 1000) + 's');
+        setLampButtons(false);
+
+        lampTimer = window.setTimeout(function () {
+            lampTimer = null;
+            setLampButtons(true);
+            // Do not clobber a value the user set by hand mid-pulse.
+            if (!live || vals[ch] !== v) {
+                log('Lamp pulse ended; channel changed meanwhile, left alone');
+                return;
+            }
+            writeLampChannel(ch, LAMP_IDLE);
+            log('Lamp pulse ended: ch' + ch + ' back to ' + LAMP_IDLE);
+        }, LAMP_PULSE_MS);
+    }
+
+    function writeLampChannel(ch, v) {
         vals[ch] = v;
         var inp = rawInputs[ch];
         if (inp) { inp.value = v; syncNumberFor(inp); }
-        log('Lamp ' + (on ? 'on' : 'off') + ': ch' + ch + ' = ' + v);
         flush();
+    }
+
+    function cancelLampPulse() {
+        if (lampTimer) {
+            window.clearTimeout(lampTimer);
+            lampTimer = null;
+            setLampButtons(true);
+        }
+    }
+
+    // Held down for the duration of a pulse so two strikes cannot overlap.
+    function setLampButtons(enabled) {
+        ['mhtLampOn', 'mhtLampOff'].forEach(function (id) {
+            var el = $(id);
+            if (el) { el.disabled = !enabled || !live || !(fx && fx.lamp); }
+        });
     }
 
     // Move a slider's paired number field without firing its input handler,
@@ -362,6 +409,7 @@ var MHT = (function () {
 
     function release() {
         if (!live) { return; }
+        cancelLampPulse();
         live = false;
         $('mhtState').textContent = 'Released';
         $('mhtState').className = 'mhtPill mhtOff';
@@ -653,6 +701,7 @@ var MHT = (function () {
             if (list[i].name === name) { fx = list[i]; break; }
         }
         if (!fx) { return; }
+        cancelLampPulse();
         if (live) { release(); }
         base = fx.absoluteStart || 0;
         vals = new Array(fx.channelCount + 1);
