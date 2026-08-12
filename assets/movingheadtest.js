@@ -152,7 +152,7 @@ var MHT = (function () {
         }
         var el = $('mhtZoneState');
         if (el) {
-            el.textContent = hit.length ? ('active: ' + hit.join(', ')) : 'not in a zone';
+            el.textContent = hit.length ? ('Active: ' + hit.join(', ')) : 'Not in a zone';
             el.className = hit.length ? 'mhtZoneOn' : 'mhtZoneOff';
         }
         return out;
@@ -243,26 +243,39 @@ var MHT = (function () {
      * strikes or douses the arc lamp itself and is not something to toggle
      * casually. Use that channel's own slider if you really mean it.
      */
-    function blackout() {
+    /**
+     * Light off / on as a symmetric pair, driving only the dimmer and shutter.
+     *
+     * Neither touches a lamp-control channel (MH1 channel 16, "Lamp / Reset").
+     * On many fixtures that strikes or douses the arc lamp itself, takes time to
+     * restrike, and shortens lamp life - not something a one-click button should
+     * do. Use that channel's own slider if you really mean it.
+     *
+     * "On" uses the model's own DmxShutterOnValue where it declares one, rather
+     * than assuming 255 means open.
+     */
+    function setLight(on) {
         if (!fx || !live) { return; }
-        var parts = [];
+        var touched = false;
         if (fx.dimmer) {
-            vals[fx.dimmer] = 0;
-            sent[fx.dimmer] = 0;
-            parts.push((base + fx.dimmer - 1) + '-' + (base + fx.dimmer - 1));
-            if (dimmerInput) { dimmerInput.value = 0; syncNumberFor(dimmerInput); }
+            vals[fx.dimmer] = on ? 255 : 0;
+            if (dimmerInput) { dimmerInput.value = vals[fx.dimmer]; syncNumberFor(dimmerInput); }
+            touched = true;
         }
         if (fx.shutter) {
-            vals[fx.shutter.channel] = 0;
-            sent[fx.shutter.channel] = 0;
-            parts.push((base + fx.shutter.channel - 1) + '-' + (base + fx.shutter.channel - 1));
-            if (shutterInput) { shutterInput.value = 0; syncNumberFor(shutterInput); }
+            var openVal = (fx.shutter.onValue === null || fx.shutter.onValue === undefined)
+                ? 255 : fx.shutter.onValue;
+            vals[fx.shutter.channel] = on ? openVal : 0;
+            if (shutterInput) { shutterInput.value = vals[fx.shutter.channel]; syncNumberFor(shutterInput); }
+            touched = true;
         }
-        if (parts.length) {
-            put('/api/overlays/range/' + parts.join(',') + '/0');
-            log('--- blackout: dimmer and shutter to 0');
+        if (touched) {
+            log(on ? 'Light on: shutter open, dimmer full' : 'Light off: dimmer and shutter to 0');
+            flush();
         }
     }
+
+    function blackout() { setLight(false); }
 
     // Move a slider's paired number field without firing its input handler,
     // which would route back through flush() and be swallowed when not live.
@@ -276,10 +289,10 @@ var MHT = (function () {
         if (!fx || !base) { return; }
         live = true;
         for (var i = 0; i <= fx.channelCount; i++) { sent[i] = -1; }
-        $('mhtState').textContent = 'in control';
+        $('mhtState').textContent = 'In control';
         $('mhtState').className = 'mhtPill mhtLive';
         setControlsEnabled(true);
-        log('--- took control of ' + fx.name + ' at ' + base + '-' + (base + fx.channelCount - 1));
+        log('Took control of ' + fx.name + ' at ' + base + '-' + (base + fx.channelCount - 1));
         flush();
     }
 
@@ -306,7 +319,7 @@ var MHT = (function () {
     function release() {
         if (!live) { return; }
         live = false;
-        $('mhtState').textContent = 'released';
+        $('mhtState').textContent = 'Released';
         $('mhtState').className = 'mhtPill mhtOff';
         setControlsEnabled(false);
         put(releasePath());
@@ -495,7 +508,7 @@ var MHT = (function () {
             })(o);
         }
         if (!any) {
-            raw.innerHTML = '<div class="mhtNote">every channel on this fixture has a declared role</div>';
+            raw.innerHTML = '<div class="mhtNote">Every channel on this fixture has a declared role</div>';
         }
 
         $('mhtPanWrap').style.display = fx.pan ? '' : 'none';
@@ -533,7 +546,7 @@ var MHT = (function () {
                 c.disabled = !on;
             });
         });
-        ['mhtCenter', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
+        ['mhtCenter', 'mhtLightOn', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
             var el = $(id);
             if (el) { el.disabled = !on; }
         });
@@ -564,9 +577,9 @@ var MHT = (function () {
         setControlsEnabled(false);
         $('mhtRange').textContent = base
             ? (base + ' – ' + (base + fx.channelCount - 1))
-            : 'no absolute channel - set a controller base';
+            : 'No absolute channel - set a controller base';
         $('mhtTake').disabled = !base;
-        log('--- selected ' + fx.name + ' (' + fx.channelCount + ' channels)');
+        log('Selected ' + fx.name + ' (' + fx.channelCount + ' channels)');
     }
 
     function init() {
@@ -592,6 +605,7 @@ var MHT = (function () {
         }
         $('mhtRelease').addEventListener('click', release);
         $('mhtCenter').addEventListener('click', center);
+        $('mhtLightOn').addEventListener('click', function () { setLight(true); });
         $('mhtBlackout').addEventListener('click', blackout);
         var z = $('mhtHonor');
         if (z) {
