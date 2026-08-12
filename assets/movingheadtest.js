@@ -114,16 +114,45 @@ var MHT = (function () {
         return pos;
     }
 
-    function panLimit() { return fx.pan ? Math.min(180, fx.pan.range / 2) : 180; }
-    function tiltLimit() { return fx.tilt ? Math.min(180, fx.tilt.range / 2) : 135; }
+    /**
+     * The angles an axis can actually reach, which depend on where home sits.
+     *
+     * A DMX position must satisfy 0 <= orientHome + deg*rev <= range, so the
+     * reachable span is anchored on home and is NOT symmetric about zero unless
+     * home happens to be mid-range. Assuming a symmetric +/-180 offered angles
+     * the fixture could not reach: the command went out of range and got folded
+     * a whole revolution, so the mapping stopped being monotonic and dragging
+     * one way could move the head the other. Intersected with the model's own
+     * MinLimit/MaxLimit, which are a separate, tighter constraint.
+     */
+    function axisBounds(m, fallback) {
+        if (!m) { return { lo: -fallback, hi: fallback }; }
+        var rev = m.reverse ? -1 : 1;
+        var a, b;
+        if (rev === 1) {
+            a = -(m.orientHome || 0);
+            b = m.range - (m.orientHome || 0);
+        } else {
+            a = (m.orientHome || 0) - m.range;
+            b = (m.orientHome || 0);
+        }
+        var lo = Math.max(a, m.min);
+        var hi = Math.min(b, m.max);
+        if (!(hi > lo)) { return { lo: -fallback, hi: fallback }; }
+        return { lo: lo, hi: hi };
+    }
+
+    function panB()  { return axisBounds(fx.pan, 180); }
+    function tiltB() { return axisBounds(fx.tilt, 135); }
 
     function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
     // Single entry point for aiming, so a drag and a typed angle behave
     // identically: clamp, move the dot, recompute channels, write.
     function setAim(p, t) {
-        panDeg = clamp(p, -panLimit(), panLimit());
-        tiltDeg = clamp(t, -tiltLimit(), tiltLimit());
+        var pb = panB(), tb = tiltB();
+        panDeg = clamp(p, pb.lo, pb.hi);
+        tiltDeg = clamp(t, tb.lo, tb.hi);
         placeDot();
         recompute();
         flush();
@@ -143,13 +172,24 @@ var MHT = (function () {
     function buildPad() {
         var svg = $('mhtRadar');
         if (!svg || !fx) { return; }
-        var cols = Math.max(2, Math.round((panLimit() * 2) / CELL));
-        var rows = Math.max(2, Math.round((tiltLimit() * 2) / CELL));
+        var pb = panB(), tb = tiltB();
+        var cols = Math.max(2, Math.round((pb.hi - pb.lo) / CELL));
+        var rows = Math.max(2, Math.round((tb.hi - tb.lo) / CELL));
         padW = cols * PX;
         padH = rows * PX;
-        padCX = padW / 2;
-        padCY = padH / 2;
+        // Zero is not necessarily the middle: it is wherever 0 degrees falls
+        // within the reachable span, which is offset whenever home is not
+        // mid-range. Drawing it at the centre regardless would misplace the one
+        // reference you aim against.
+        padCX = ((0 - pb.lo) / (pb.hi - pb.lo)) * padW;
+        padCY = ((tb.hi - 0) / (tb.hi - tb.lo)) * padH;
         svg.setAttribute('viewBox', '0 0 ' + padW + ' ' + padH);
+        // Explicit width/height give the element an intrinsic size. Relying on
+        // CSS width:100% inside a content-sized flex item is circular and
+        // resolves to zero, which collapsed the pad and made every pointer
+        // measurement a divide-by-zero.
+        svg.setAttribute('width', padW);
+        svg.setAttribute('height', padH);
 
         var p = [];
         p.push('<rect class="mhtPadBg" x="0.5" y="0.5" width="' + (padW - 1) +
@@ -175,6 +215,9 @@ var MHT = (function () {
         p.push('<text class="mhtRadarTick" x="' + (padW - 4) + '" y="' + (padCY - 6) + '" text-anchor="end">pan +</text>');
         p.push('<text class="mhtRadarTick" x="4" y="' + (padCY - 6) + '">pan \u2212</text>');
         p.push('<text class="mhtRadarTick" x="4" y="12">' + CELL + '\u00b0 per block</text>');
+        p.push('<text class="mhtRadarTick" x="' + (padW - 4) + '" y="12" text-anchor="end">pan ' +
+               Math.round(pb.lo) + '\u2026' + Math.round(pb.hi) + '\u00b0, tilt ' +
+               Math.round(tb.lo) + '\u2026' + Math.round(tb.hi) + '\u00b0</text>');
 
         p.push('<rect class="mhtMark" id="mhtDot" x="0" y="0" width="13" height="13"/>');
         svg.innerHTML = p.join('');
@@ -185,8 +228,9 @@ var MHT = (function () {
     function placeDot() {
         var m = $('mhtDot');
         if (!m) { return; }
-        var x = padCX + (panDeg / panLimit()) * padCX;
-        var y = padCY - (tiltDeg / tiltLimit()) * padCY;
+        var pb = panB(), tb = tiltB();
+        var x = ((panDeg - pb.lo) / (pb.hi - pb.lo)) * padW;
+        var y = ((tb.hi - tiltDeg) / (tb.hi - tb.lo)) * padH;
         m.setAttribute('x', x - 6.5);
         m.setAttribute('y', y - 6.5);
     }
@@ -497,11 +541,16 @@ var MHT = (function () {
     function radarPoint(e) {
         var svg = $('mhtRadar');
         var b = svg.getBoundingClientRect();
+        // A collapsed or not-yet-laid-out pad would divide by zero here and
+        // carry NaN all the way into the channel values. Ignore the gesture
+        // instead: better to do nothing than to command a garbage position.
+        if (!(b.width > 0) || !(b.height > 0)) { return; }
         var x = (e.clientX - b.left) / b.width * padW;
         var y = (e.clientY - b.top) / b.height * padH;
         // clamped per axis, so every corner of the range is reachable
-        setAim(((x - padCX) / padCX) * panLimit(),
-               -((y - padCY) / padCY) * tiltLimit());
+        var pb = panB(), tb = tiltB();
+        setAim(pb.lo + (x / padW) * (pb.hi - pb.lo),
+               tb.hi - (y / padH) * (tb.hi - tb.lo));
     }
 
     function center() { setAim(0, 0); }
@@ -785,6 +834,14 @@ var MHT = (function () {
     }
 
     function init() {
+        // The lamp form is wired FIRST, before the tool-DOM guard below. It does
+        // not need the pad or the control surface, and the state where it matters
+        // most is the one where those do not exist yet: nothing driveable, so you
+        // are still configuring. Wiring it after the guard meant the form fell
+        // back to a native POST exactly then - which reloads the page, which is
+        // what "it doesn't take effect until I refresh" actually was.
+        wireLampForm();
+
         // plugin.php auto-includes this file on every render of any page in the
         // plugin, including status.php with no fixtures imported yet and
         // about.php. Bail out quietly when the tool's DOM is not present rather
@@ -860,7 +917,6 @@ var MHT = (function () {
         window.addEventListener('beforeunload', blackoutOnUnload);
         window.addEventListener('pagehide', blackoutOnUnload);
 
-        wireLampForm();
         if (sel && sel.options.length) { selectFixture(sel.value); }
     }
 

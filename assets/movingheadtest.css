@@ -13,7 +13,7 @@
    radar on a narrow screen - which matters, since aiming a head from a phone
    in the yard is a real use of this page. */
 .mhtCol { flex: 1 1 340px; min-width: 0; }
-#mhtRadarWrap { flex: 0 1 auto; max-width: 300px; min-width: 0; }
+#mhtRadarWrap { flex: 0 0 auto; }
 
 .mhtBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .mhtBar .mhtGrow { flex: 1; }
@@ -72,7 +72,12 @@ input.mhtBig::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtReadout .mhtRaw { font-family: monospace; font-size: 11px; opacity: .6; }
 
-.mhtRadar { touch-action: none; cursor: crosshair; width: 100%; max-width: 340px; height: auto; }
+/* Size comes solely from the width/height attributes buildPad sets. No
+   percentage width here: this sits in a flex item sized from its content, so a
+   percentage resolves against a parent that is itself sized by this element -
+   circular, and it collapses to zero. The pad is at most 8 x 40 = 320px, which
+   fits a phone, so no responsive scaling is needed. */
+.mhtRadar { touch-action: none; cursor: crosshair; display: block; }
 .mhtPadBg { fill: none; stroke: currentColor; stroke-opacity: .45; }
 .mhtPadGrid { stroke: currentColor; stroke-opacity: .16; }
 /* tilt 0 gets a stronger line, pan 0 a colored one - the two references you
