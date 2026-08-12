@@ -264,11 +264,6 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   title="Writes the lamp channel's configured On value.">Lamp On</button>
           <button type="button" id="mhtLampOff" class="buttons"
                   title="Writes the lamp channel's configured Off value.">Lamp Off</button>
-          <span class="mhtQuickSep"></span>
-          <button type="button" id="mhtLightOn" class="buttons"
-                  title="Shutter open and dimmer full. Does not strike the lamp.">Beam On</button>
-          <button type="button" id="mhtBlackout" class="buttons"
-                  title="Dimmer and shutter to 0. Does not douse the lamp.">Beam Off</button>
         </div>
         <div class="mhtNote" id="mhtLampNote"></div>
       </fieldset>

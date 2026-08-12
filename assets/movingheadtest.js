@@ -29,8 +29,6 @@ var MHT = (function () {
     var dragging = false;
     var panDeg = 0, tiltDeg = 0;
     var honorZones = true;
-    var dimmerInput = null;   // held so the quick commands can move the control
-    var shutterInput = null;
     var rawInputs = {};       // channel offset -> its range input
     // Pad geometry, recomputed per fixture. CELL is degrees per grid block;
     // PX is its size in viewBox units, so cells stay square whatever the ranges.
@@ -306,39 +304,6 @@ var MHT = (function () {
      * strikes or douses the arc lamp itself and is not something to toggle
      * casually. Use that channel's own slider if you really mean it.
      */
-    /**
-     * Light off / on as a symmetric pair, driving only the dimmer and shutter.
-     *
-     * Neither touches a lamp-control channel (MH1 channel 16, "Lamp / Reset").
-     * On many fixtures that strikes or douses the arc lamp itself, takes time to
-     * restrike, and shortens lamp life - not something a one-click button should
-     * do. Use that channel's own slider if you really mean it.
-     *
-     * "On" uses the model's own DmxShutterOnValue where it declares one, rather
-     * than assuming 255 means open.
-     */
-    function setLight(on) {
-        if (!fx || !live) { return; }
-        var touched = false;
-        if (fx.dimmer) {
-            vals[fx.dimmer] = on ? 255 : 0;
-            if (dimmerInput) { dimmerInput.value = vals[fx.dimmer]; syncNumberFor(dimmerInput); }
-            touched = true;
-        }
-        if (fx.shutter) {
-            var openVal = (fx.shutter.onValue === null || fx.shutter.onValue === undefined)
-                ? 255 : fx.shutter.onValue;
-            vals[fx.shutter.channel] = on ? openVal : 0;
-            if (shutterInput) { shutterInput.value = vals[fx.shutter.channel]; syncNumberFor(shutterInput); }
-            touched = true;
-        }
-        if (touched) {
-            log(on ? 'Light on: shutter open, dimmer full' : 'Light off: dimmer and shutter to 0');
-            flush();
-        }
-    }
-
-    function blackout() { setLight(false); }
 
     /**
      * Lamp strike / douse. Only available when the fixture has lamp config,
@@ -555,8 +520,6 @@ var MHT = (function () {
         sem.innerHTML = '';
         raw.innerHTML = '';
 
-        dimmerInput = null;
-        shutterInput = null;
         rawInputs = {};
 
         // The lamp channel is deliberately NOT here. This group is what the model
@@ -568,7 +531,6 @@ var MHT = (function () {
             var dr = row(base + fx.dimmer - 1, 'Dimmer', vals[fx.dimmer] || 0, 255, function (v) {
                 vals[fx.dimmer] = v; flush();
             });
-            dimmerInput = dr.querySelector('input[type=range]');
             sem.appendChild(dr);
         }
 
@@ -580,7 +542,6 @@ var MHT = (function () {
             var sr = row(base + fx.shutter.channel - 1, 'Shutter', vals[fx.shutter.channel] || 0, 255, function (v) {
                 vals[fx.shutter.channel] = v; flush();
             });
-            shutterInput = sr.querySelector('input[type=range]');
             sem.appendChild(sr);
         }
 
@@ -660,7 +621,7 @@ var MHT = (function () {
                 c.disabled = !on;
             });
         });
-        ['mhtCenter', 'mhtLampOn', 'mhtLampOff', 'mhtLightOn', 'mhtBlackout', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
+        ['mhtCenter', 'mhtLampOn', 'mhtLampOff', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
             var el = $(id);
             if (el) { el.disabled = !on; }
         });
@@ -799,8 +760,6 @@ var MHT = (function () {
         $('mhtCenter').addEventListener('click', center);
         $('mhtLampOn').addEventListener('click', function () { setLamp(true); });
         $('mhtLampOff').addEventListener('click', function () { setLamp(false); });
-        $('mhtLightOn').addEventListener('click', function () { setLight(true); });
-        $('mhtBlackout').addEventListener('click', blackout);
         var z = $('mhtHonor');
         if (z) {
             z.addEventListener('change', function () { honorZones = z.checked; flush(); });
