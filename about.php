@@ -56,8 +56,13 @@
         of motion, home offset and reverse flag. The Pan and Tilt boxes accept typed angles for
         exact positioning.</li>
     <li><strong>Quick Commands</strong> &mdash; <em>Lamp On/Off</em> strikes or douses the arc
-        lamp, using the channel and values you configure under Lamp Control. The beam itself is
-        controlled by the Dimmer and Shutter sliders.</li>
+        lamp, using the channel and values you configure under Lamp Control. These are
+        <strong>momentary</strong>: the value is held for about five seconds and the channel then
+        returns to 0. A lamp strike latches on the transition, and a lamp/reset channel's value
+        ranges usually mean something different when held, so the command is pulsed rather than
+        parked. Both buttons are disabled during a pulse so two commands cannot overlap, and
+        moving that channel by hand mid-pulse cancels the return rather than being overwritten.
+        The beam itself is controlled by the Dimmer and Shutter sliders.</li>
     <li><strong>Declared by the model</strong> &mdash; dimmer, shutter and color wheel appear
         only when the model actually declares them. A channel attribute of <code>0</code> means
         unset in xLights, so such a channel becomes a raw slider instead, even if its label
