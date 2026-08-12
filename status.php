@@ -236,8 +236,10 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <circle class="mhtRadarRing" cx="150" cy="150" r="36"/>
         <line class="mhtRadarAxis" x1="150" y1="6" x2="150" y2="294"/>
         <line class="mhtRadarAxis" x1="6" y1="150" x2="294" y2="150"/>
-        <text class="mhtRadarTick" x="150" y="20" text-anchor="middle">tilt +</text>
-        <text class="mhtRadarTick" x="150" y="288" text-anchor="middle">tilt &minus;</text>
+        <text class="mhtRadarDir"  x="150" y="22"  text-anchor="middle">BACK</text>
+        <text class="mhtRadarTick" x="150" y="34"  text-anchor="middle">tilt +</text>
+        <text class="mhtRadarTick" x="150" y="272" text-anchor="middle">tilt &minus;</text>
+        <text class="mhtRadarDir"  x="150" y="286" text-anchor="middle">FRONT</text>
         <text class="mhtRadarTick" x="276" y="146" text-anchor="middle">pan +</text>
         <text class="mhtRadarTick" x="26" y="146" text-anchor="middle">pan &minus;</text>
         <line class="mhtRay" id="mhtRay" x1="150" y1="150" x2="150" y2="150"/>
