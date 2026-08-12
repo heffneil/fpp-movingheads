@@ -63,6 +63,13 @@
         parked. Both buttons are disabled during a pulse so two commands cannot overlap, and
         moving that channel by hand mid-pulse cancels the return rather than being overwritten.
         The beam itself is controlled by the Dimmer and Shutter sliders.</li>
+    <li><strong>Lamp cooldown</strong> &mdash; after a Lamp Off, Lamp On is held for the
+        configured cooldown and a countdown is shown. A discharge lamp has to cool before it
+        will strike again; forcing it early either fails or costs lamp life, and neither is
+        visible from a browser. The deadline is stored with the fixture, not in the browser, so
+        it survives a reload, another tab and another machine &mdash; a cooling lamp is a fact
+        about the fixture. The countdown is shown whether or not you are in control. Set the
+        duration from your fixture's manual; <code>0</code> disables the hold entirely.</li>
     <li><strong>Declared by the model</strong> &mdash; dimmer, shutter and color wheel appear
         only when the model actually declares them. A channel attribute of <code>0</code> means
         unset in xLights, so such a channel becomes a raw slider instead, even if its label
@@ -74,6 +81,10 @@
   <h3>Safety</h3>
   <ul>
     <li>All channels start at 0, so nothing lights until you raise the dimmer.</li>
+    <li><strong>Do not cycle the lamp.</strong> Repeated strike/douse is the one thing here
+        that damages hardware rather than just looking wrong. The cooldown enforces the wait
+        after a Lamp Off, but nothing can enforce the wait if the fixture is also being
+        switched at the console or at the mains.</li>
     <li><strong>Position zones are honored by default.</strong> Where a model defines
         <code>PositionZone</code> rules, a channel is forced to its zone value while pan and
         tilt sit inside that box &mdash; typically a blackout arc pointed somewhere you do not
@@ -92,6 +103,16 @@
         settle when you let go. On a 540&deg; head that is roughly two degrees of precision
         mid-drag, which halves the request rate during the one high-rate action.</li>
   </ul>
+
+  <h3>Lamp control setup</h3>
+  <p>
+    The lamp <em>channel</em> is in the model &mdash; xLights labels it in
+    <code>NodeNames</code>, usually &ldquo;Lamp&rdquo; or &ldquo;Lamp / Reset&rdquo; &mdash; so
+    it is filled in for you when the label is recognisable. The <em>values</em> are not: xLights
+    stores one fixed value per channel, not a selectable on/off pair, and every manufacturer
+    picks different ranges. Those come from the fixture's DMX chart. A channel with no values,
+    or values with no channel, is rejected rather than half-saved.
+  </p>
 
   <h3>Known limitations</h3>
   <ul>

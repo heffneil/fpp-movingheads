@@ -33,6 +33,18 @@ var MHT = (function () {
     // Pad geometry, recomputed per fixture. CELL is degrees per grid block;
     // PX is its size in viewBox units, so cells stay square whatever the ranges.
     var CELL = 45, PX = 40;
+    // A fixture whose reachable pan span is only 180 degrees gets 4 blocks, and 4
+    // x 40 units is a cramped little pad. Blocks are grown towards MIN_W so a
+    // small grid is still comfortable, capped by MAX_PX and by MAX_H.
+    //
+    // One scale for both axes, because a 45 degree block should look square. That
+    // makes MIN_W and MAX_H genuinely conflicting on a lopsided fixture (narrow
+    // pan, wide tilt), and the PX floor wins both: such a pad ends up narrow and
+    // over MAX_H rather than sub-40 units per block. Squareness and legible cells
+    // matter more than the envelope, and nothing depends on the pad's size -
+    // pointer maths reads the rendered rect, and the pan/tilt spans are stated in
+    // the caption underneath rather than lettered across the top.
+    var MIN_W = 320, MAX_H = 420, MAX_PX = 64;
     var padW = 320, padH = 240, padCX = 160, padCY = 120;
 
     // Password managers latch onto bare number inputs and pop their autofill UI
@@ -175,8 +187,10 @@ var MHT = (function () {
         var pb = panB(), tb = tiltB();
         var cols = Math.max(2, Math.round((pb.hi - pb.lo) / CELL));
         var rows = Math.max(2, Math.round((tb.hi - tb.lo) / CELL));
-        padW = cols * PX;
-        padH = rows * PX;
+        var px = Math.min(MAX_PX, Math.max(PX, MIN_W / cols));
+        px = Math.max(PX, Math.min(px, MAX_H / rows));
+        padW = cols * px;
+        padH = rows * px;
         // Zero is not necessarily the middle: it is wherever 0 degrees falls
         // within the reachable span, which is offset whenever home is not
         // mid-range. Drawing it at the centre regardless would misplace the one
@@ -195,12 +209,12 @@ var MHT = (function () {
         p.push('<rect class="mhtPadBg" x="0.5" y="0.5" width="' + (padW - 1) +
                '" height="' + (padH - 1) + '"/>');
         for (var c = 1; c < cols; c++) {
-            p.push('<line class="mhtPadGrid" x1="' + (c * PX) + '" y1="0" x2="' +
-                   (c * PX) + '" y2="' + padH + '"/>');
+            p.push('<line class="mhtPadGrid" x1="' + (c * px) + '" y1="0" x2="' +
+                   (c * px) + '" y2="' + padH + '"/>');
         }
         for (var r = 1; r < rows; r++) {
-            p.push('<line class="mhtPadGrid" x1="0" y1="' + (r * PX) + '" x2="' +
-                   padW + '" y2="' + (r * PX) + '"/>');
+            p.push('<line class="mhtPadGrid" x1="0" y1="' + (r * px) + '" x2="' +
+                   padW + '" y2="' + (r * px) + '"/>');
         }
         // tilt 0 and pan 0 references, drawn over the grid
         p.push('<line class="mhtPadAxis" x1="0" y1="' + padCY + '" x2="' + padW +
@@ -214,13 +228,20 @@ var MHT = (function () {
         p.push('<text class="mhtRadarDir"  x="' + padCX + '" y="' + (padH - 5) + '" text-anchor="middle">FRONT</text>');
         p.push('<text class="mhtRadarTick" x="' + (padW - 4) + '" y="' + (padCY - 6) + '" text-anchor="end">pan +</text>');
         p.push('<text class="mhtRadarTick" x="4" y="' + (padCY - 6) + '">pan \u2212</text>');
-        p.push('<text class="mhtRadarTick" x="4" y="12">' + CELL + '\u00b0 per block</text>');
-        p.push('<text class="mhtRadarTick" x="' + (padW - 4) + '" y="12" text-anchor="end">pan ' +
-               Math.round(pb.lo) + '\u2026' + Math.round(pb.hi) + '\u00b0, tilt ' +
-               Math.round(tb.lo) + '\u2026' + Math.round(tb.hi) + '\u00b0</text>');
 
         p.push('<rect class="mhtMark" id="mhtDot" x="0" y="0" width="13" height="13"/>');
         svg.innerHTML = p.join('');
+
+        // Each fact is its own nowrap span so the caption wraps between them and
+        // never mid-range - "tilt -135...            135" reads as two numbers.
+        var cap = $('mhtPadCaption');
+        if (cap) {
+            cap.innerHTML = [
+                CELL + '\u00b0 per block',
+                'pan ' + Math.round(pb.lo) + '\u2026' + Math.round(pb.hi) + '\u00b0',
+                'tilt ' + Math.round(tb.lo) + '\u2026' + Math.round(tb.hi) + '\u00b0'
+            ].map(function (t) { return '<span>' + t + '</span>'; }).join(' \u00b7 ');
+        }
         placeDot();
     }
 
@@ -367,6 +388,10 @@ var MHT = (function () {
      */
     function setLamp(on) {
         if (!fx || !live || !fx.lamp) { return; }
+        if (on && coolMsLeft() > 0) {
+            log('Lamp on refused: ' + fmtDuration(coolMsLeft()) + ' of cooldown left');
+            return;
+        }
         var ch = fx.lamp.channel;
         var v = on ? fx.lamp.onValue : fx.lamp.offValue;
 
@@ -374,11 +399,12 @@ var MHT = (function () {
         writeLampChannel(ch, v);
         log('Lamp ' + (on ? 'on' : 'off') + ': ch' + ch + ' = ' + v +
             ' for ' + (LAMP_PULSE_MS / 1000) + 's');
-        setLampButtons(false);
+        if (!on) { startCooldown(); }
+        refreshLampButtons();
 
         lampTimer = window.setTimeout(function () {
             lampTimer = null;
-            setLampButtons(true);
+            refreshLampButtons();
             // Do not clobber a value the user set by hand mid-pulse.
             if (!live || vals[ch] !== v) {
                 log('Lamp pulse ended; channel changed meanwhile, left alone');
@@ -387,6 +413,67 @@ var MHT = (function () {
             writeLampChannel(ch, LAMP_IDLE);
             log('Lamp pulse ended: ch' + ch + ' back to ' + LAMP_IDLE);
         }, LAMP_PULSE_MS);
+    }
+
+    // ---- restrike cooldown ---------------------------------------------------
+    //
+    // A discharge lamp has to cool before it will strike again. Forcing an early
+    // restrike either fails or shortens lamp life, and neither is visible from
+    // here - so the tool holds Lamp On rather than trusting whoever is at the
+    // keyboard to remember. The deadline is recorded server-side on lamp off, so
+    // it survives a page reload, a different tab, and a different browser: the
+    // cooling lamp is a property of the fixture, not of this page. The countdown
+    // is shown whether or not you are in control, because the lamp does not care.
+
+    function coolMsLeft() {
+        if (!fx || !fx.coolUntilMs) { return 0; }
+        return Math.max(0, fx.coolUntilMs - Date.now());
+    }
+
+    function startCooldown() {
+        var secs = fx.lamp ? (fx.lamp.cooldownSec || 0) : 0;
+        if (secs <= 0) { return; }
+        fx.coolUntilMs = Date.now() + secs * 1000;
+        // Persist through the server so the deadline is not lost with this tab.
+        var fd = new FormData();
+        fd.append('mhtAction', 'lampoff');
+        fd.append('fixture', fx.name);
+        fetch(window.location.href, { method: 'POST', body: fd })
+            .catch(function (err) {
+                log('WARN cooldown not recorded server-side (' + err + '); ' +
+                    'it will not survive a reload');
+            });
+        tickCooldown();
+    }
+
+    function fmtDuration(ms) {
+        var t = Math.ceil(ms / 1000);
+        var m = Math.floor(t / 60);
+        var sec = t % 60;
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    function tickCooldown() {
+        var el = $('mhtCooldown');
+        var left = coolMsLeft();
+        if (el) {
+            el.hidden = left <= 0;
+            if (left > 0) {
+                el.textContent = 'Lamp cooling down - ' + fmtDuration(left) +
+                    ' before it may be struck again. Lamp On is held until then.';
+            }
+        }
+        refreshLampButtons();
+    }
+
+    // Seed each fixture's deadline from the server's remaining seconds rather
+    // than an absolute time, so a clock offset between browser and player cannot
+    // make a cooling lamp look ready.
+    function initCooldowns() {
+        (window.MHT_FIXTURES || []).forEach(function (f) {
+            var left = f.cooldownRemaining || 0;
+            if (left > 0) { f.coolUntilMs = Date.now() + left * 1000; }
+        });
     }
 
     function writeLampChannel(ch, v) {
@@ -400,16 +487,22 @@ var MHT = (function () {
         if (lampTimer) {
             window.clearTimeout(lampTimer);
             lampTimer = null;
-            setLampButtons(true);
+            refreshLampButtons();
         }
     }
 
-    // Held down for the duration of a pulse so two strikes cannot overlap.
-    function setLampButtons(enabled) {
-        ['mhtLampOn', 'mhtLampOff'].forEach(function (id) {
-            var el = $(id);
-            if (el) { el.disabled = !enabled || !live || !(fx && fx.lamp); }
-        });
+    /**
+     * Both lamp buttons derive their state from the same four facts rather than
+     * being enabled and disabled from a dozen call sites: in control, lamp
+     * configured, no pulse already running, and - for Lamp On only - no restrike
+     * cooldown outstanding.
+     */
+    function refreshLampButtons() {
+        var ready = live && !!(fx && fx.lamp) && lampTimer === null;
+        var on = $('mhtLampOn');
+        var off = $('mhtLampOff');
+        if (on) { on.disabled = !ready || coolMsLeft() > 0; }
+        if (off) { off.disabled = !ready; }
     }
 
     // Move a slider's paired number field without firing its input handler,
@@ -722,12 +815,11 @@ var MHT = (function () {
             var el = $(id);
             if (el) { el.disabled = !on; }
         });
-        // No lamp config means no lamp command, in control or not.
+        // No lamp config means no lamp command, in control or not. Both buttons
+        // are owned by refreshLampButtons so the cooldown hold is not undone
+        // here every time the surface is re-enabled.
         var haveLamp = !!(fx && fx.lamp);
-        ['mhtLampOn', 'mhtLampOff'].forEach(function (id) {
-            var el = $(id);
-            if (el) { el.disabled = !on || !haveLamp; }
-        });
+        refreshLampButtons();
         var note = $('mhtLampNote');
         if (note) {
             note.textContent = haveLamp
@@ -741,6 +833,7 @@ var MHT = (function () {
         if (wrap) { wrap.classList.toggle('mhtDimmed', !on); }
         var mask = $('mhtMask');
         if (mask) { mask.hidden = on; }
+        tickCooldown();
     }
 
     function selectFixture(name) {
@@ -798,9 +891,21 @@ var MHT = (function () {
                 e.preventDefault();
                 var fd = new FormData(form);
                 var name = fd.get('fixture');
+                fd.append('mhtAjax', '1');
                 fetch(window.location.href, { method: 'POST', body: fd })
                     .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
-                    .then(function () {
+                    .then(function (body) {
+                        var res = parseResult(body);
+                        // A rejected save must not report success, or a row that
+                        // stored nothing looks identical to one that worked.
+                        if (!res.ok) {
+                            (res.problems || ['Lamp config not saved']).forEach(function (m) {
+                                log('FAIL ' + stripTags(m));
+                            });
+                            showLampError(form, (res.problems || [])[0] || 'Not saved');
+                            return;
+                        }
+                        showLampError(form, null);
                         var ch = parseInt(fd.get('lampChannel'), 10);
                         var target = null;
                         (window.MHT_FIXTURES || []).forEach(function (f) {
@@ -813,7 +918,8 @@ var MHT = (function () {
                                 target.lamp = {
                                     channel: ch,
                                     onValue: parseInt(fd.get('lampOn'), 10) || 0,
-                                    offValue: parseInt(fd.get('lampOff'), 10) || 0
+                                    offValue: parseInt(fd.get('lampOff'), 10) || 0,
+                                    cooldownSec: parseInt(fd.get('lampCooldown'), 10) || 0
                                 };
                             }
                         }
@@ -833,6 +939,45 @@ var MHT = (function () {
         });
     }
 
+    /**
+     * Pull the server's result out of the page it sends back.
+     *
+     * The plugin page is rendered inside FPP's own page shell, so the reply is
+     * always HTML and cannot be a JSON response - the marker is the contract. A
+     * reply with no marker means the request did not reach this version of the
+     * page, which is treated as a failure rather than assumed to be a success.
+     */
+    function parseResult(body) {
+        var m = /<!--MHT-RESULT:([\s\S]*?)-->/.exec(body || '');
+        if (!m) {
+            return { ok: false, problems: ['No reply from the plugin page - reload and retry'] };
+        }
+        try {
+            return JSON.parse(m[1]);
+        } catch (e) {
+            return { ok: false, problems: ['Unreadable reply from the plugin page'] };
+        }
+    }
+
+    // Server messages are built for HTML (names are escaped there); the log is a
+    // text node, so undo that rather than showing &amp; to the user.
+    function stripTags(m) {
+        var d = document.createElement('div');
+        d.innerHTML = m;
+        return d.textContent || '';
+    }
+
+    function showLampError(form, msg) {
+        var el = form.querySelector('.mhtLampErr');
+        if (!el) {
+            el = document.createElement('span');
+            el.className = 'mhtLampErr';
+            form.appendChild(el);
+        }
+        el.hidden = !msg;
+        el.textContent = msg ? stripTags(msg) : '';
+    }
+
     function init() {
         // The lamp form is wired FIRST, before the tool-DOM guard below. It does
         // not need the pad or the control surface, and the state where it matters
@@ -841,6 +986,12 @@ var MHT = (function () {
         // back to a native POST exactly then - which reloads the page, which is
         // what "it doesn't take effect until I refresh" actually was.
         wireLampForm();
+
+        // Seeded and ticking before the tool-DOM guard: a cooling lamp is worth
+        // reporting even on a page with nothing driveable.
+        initCooldowns();
+        tickCooldown();
+        window.setInterval(tickCooldown, 1000);
 
         // plugin.php auto-includes this file on every render of any page in the
         // plugin, including status.php with no fixtures imported yet and
