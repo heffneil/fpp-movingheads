@@ -89,7 +89,13 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
   padding: 9px 12px; margin: 0 0 12px;
   min-width: 0;
 }
-.mhtFieldset legend { font-size: 12px; opacity: .7; padding: 0 5px; width: auto; margin: 0; border: 0; }
+/* Right padding only. Symmetric padding indents the legend's text 5px further
+   than the body text below it, since the two boxes already share a left edge -
+   the gap is only needed on the right, where the top border resumes. */
+.mhtFieldset legend {
+  font-size: 12px; opacity: .7; width: auto; margin: 0; border: 0;
+  padding: 0 5px 0 0;
+}
 
 .mhtNote { font-size: 12px; opacity: .65; }
 .mhtZoneOn { font-size: 12px; color: #b8860b; }
