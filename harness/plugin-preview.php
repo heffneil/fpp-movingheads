@@ -67,6 +67,20 @@ function WriteSettingToFile($name, $value, $plugin = '')
 // ---- mock the overlay API -------------------------------------------------
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
+// Stand in for /api/system/info so the "not driveable from this device" path is
+// testable off-device. Without channelRanges, LocalOutputs treats the ranges as
+// unknown and every fixture reads as driveable - which hides a whole class of
+// state, including the one where the tool DOM is absent.
+if ($uri === '/api/system/info') {
+    header('Content-Type: application/json');
+    $ranges = getenv('MHT_FAKE_RANGES');
+    echo json_encode([
+        'HostName' => 'harness',
+        'channelRanges' => $ranges !== false ? $ranges : '109432-109447',
+    ]);
+    exit;
+}
+
 if (str_starts_with($uri, '/api/')) {
     file_put_contents($LOG, $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . "\n", FILE_APPEND);
     header('Content-Type: application/json');
