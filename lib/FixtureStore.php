@@ -112,6 +112,35 @@ class FixtureStore
         self::saveFixtures($out);
     }
 
+    /**
+     * Lamp control is per-fixture config, not model data.
+     *
+     * xLights cannot express it: its "Number of Fixed Channels" holds one fixed
+     * value per channel, not a selectable on/off pair. And the values are
+     * fixture-specific - striking an arc lamp with the wrong value is not
+     * something to guess at - so they are entered, never inferred. Absent lamp
+     * config means no lamp buttons at all.
+     */
+    public static function setLamp(string $name, ?int $channel, ?int $onValue, ?int $offValue): void
+    {
+        $out = [];
+        foreach (self::fixtures() as $f) {
+            if ($f['name'] === $name) {
+                if ($channel === null || $channel < 1) {
+                    unset($f['lamp']);
+                } else {
+                    $f['lamp'] = [
+                        'channel' => $channel,
+                        'onValue' => max(0, min(255, (int) $onValue)),
+                        'offValue' => max(0, min(255, (int) $offValue)),
+                    ];
+                }
+            }
+            $out[] = $f;
+        }
+        self::saveFixtures($out);
+    }
+
     /** @return array<string,int> controller name => base channel */
     public static function bases(): array
     {
