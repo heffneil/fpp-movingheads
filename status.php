@@ -23,6 +23,7 @@
 
 require_once __DIR__ . '/lib/XmodelParser.php';
 require_once __DIR__ . '/lib/FixtureStore.php';
+require_once __DIR__ . '/lib/LocalOutputs.php';
 
 $notices = [];
 $problems = [];
@@ -77,13 +78,24 @@ $fixtures = FixtureStore::fixtures();
 $resolved = [];
 foreach ($fixtures as $f) {
     $f['absoluteStart'] = FixtureStore::absoluteStart($f, $bases);
+    // null means we could not ask this instance; that is not a fault, so the UI
+    // stays quiet rather than crying wolf.
+    $f['emittedHere'] = $f['absoluteStart']
+        ? LocalOutputs::covers((int) $f['absoluteStart'], (int) $f['channelCount'])
+        : null;
     $resolved[] = $f;
 }
 usort($resolved, function ($a, $b) {
     return strnatcasecmp($a['name'], $b['name']);
 });
 $ready = array_values(array_filter($resolved, function ($f) {
-    return !empty($f['absoluteStart']);
+    // A fixture outside this instance's output ranges accepts every write and
+    // does nothing, so it must not be selectable - that silence is impossible
+    // to tell from a wiring fault.
+    return !empty($f['absoluteStart']) && $f['emittedHere'] !== false;
+}));
+$notEmitted = array_values(array_filter($resolved, function ($f) {
+    return !empty($f['absoluteStart']) && $f['emittedHere'] === false;
 }));
 $unresolved = array_values(array_filter($resolved, function ($f) {
     return empty($f['absoluteStart']);
@@ -147,6 +159,29 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                 </form>
               <?php endif; ?>
             </td>
+          </tr>
+        <?php endforeach; ?>
+      </table>
+    </fieldset>
+  <?php endif; ?>
+
+  <?php if ($notEmitted): ?>
+    <fieldset class="mhtFieldset">
+      <legend>not driveable from this device</legend>
+      <p class="mhtNote">
+        These fixtures have a valid absolute address, but it falls outside the channels this
+        FPP instance actually puts on the wire (<?php echo htmlspecialchars(LocalOutputs::describe()); ?>).
+        Writes to them would be accepted and silently do nothing, so they are not offered for
+        control. Drive them from the instance that emits their channels, or correct the address.
+      </p>
+      <table class="mhtTable">
+        <tr><th>fixture</th><th>channels</th><th>ch</th></tr>
+        <?php foreach ($notEmitted as $f): ?>
+          <tr>
+            <td><?php echo htmlspecialchars($f['name']); ?></td>
+            <td class="mhtWarn"><?php echo (int) $f['absoluteStart']; ?>&ndash;<?php
+                echo (int) $f['absoluteStart'] + (int) $f['channelCount'] - 1; ?></td>
+            <td><?php echo (int) $f['channelCount']; ?></td>
           </tr>
         <?php endforeach; ?>
       </table>
@@ -254,13 +289,24 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   <fieldset class="mhtFieldset">
     <legend>registered fixtures</legend>
     <table class="mhtTable">
-      <tr><th>fixture</th><th>type</th><th>ch</th><th>absolute</th><th>source</th><th></th></tr>
+      <tr><th>fixture</th><th>type</th><th>ch</th><th>absolute</th><th>on the wire</th><th>source</th><th></th></tr>
       <?php foreach ($resolved as $f): ?>
         <tr>
           <td><?php echo htmlspecialchars($f['name']); ?></td>
           <td><?php echo htmlspecialchars($f['type']); ?></td>
           <td><?php echo (int) $f['channelCount']; ?></td>
           <td><?php echo $f['absoluteStart'] ? (int) $f['absoluteStart'] : '<span class="mhtWarn">unresolved</span>'; ?></td>
+          <td class="mhtNote">
+            <?php
+            if ($f['emittedHere'] === true) {
+                echo 'yes';
+            } elseif ($f['emittedHere'] === false) {
+                echo '<span class="mhtWarn">not emitted here</span>';
+            } else {
+                echo '&mdash;';
+            }
+            ?>
+          </td>
           <td class="mhtNote">
             <?php
             if (isset($f['override'])) {
