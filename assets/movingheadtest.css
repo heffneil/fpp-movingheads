@@ -147,3 +147,9 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtLampRow label { font-size: 12px; opacity: .7; margin: 0; }
 .mhtLampName { min-width: 74px; font-size: 13px; }
 .mhtLampSaved { color: #2e8b57; }
+
+/* Real-world orientation on the pad. Deliberately more prominent than the
+   tilt +/- ticks: those say which way the number moves, these say what it means
+   once the fixture is on the wall. */
+.mhtRadarDir { font-size: 11px; font-weight: 500; letter-spacing: .5px;
+               fill: currentColor; opacity: .72; }
