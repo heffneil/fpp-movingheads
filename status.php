@@ -63,6 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $v = trim((string) ($_POST['absolute'] ?? ''));
         FixtureStore::setOverride($n, $v === '' ? null : max(1, (int) $v));
         $notices[] = 'Override updated for ' . htmlspecialchars($n) . '.';
+    } elseif ($action === 'lamp') {
+        $n = (string) ($_POST['fixture'] ?? '');
+        $ch = trim((string) ($_POST['lampChannel'] ?? ''));
+        FixtureStore::setLamp(
+            $n,
+            $ch === '' ? null : (int) $ch,
+            (int) ($_POST['lampOn'] ?? 0),
+            (int) ($_POST['lampOff'] ?? 0)
+        );
+        $notices[] = $ch === ''
+            ? 'Lamp control cleared for ' . htmlspecialchars($n) . '.'
+            : 'Lamp control for ' . htmlspecialchars($n) . ' set to channel ' . (int) $ch . '.';
     } elseif ($action === 'remove') {
         $n = (string) ($_POST['fixture'] ?? '');
         FixtureStore::remove($n);
@@ -233,8 +245,6 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </svg>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
-        <button type="button" id="mhtLightOn" class="buttons" title="Shutter open and dimmer full. Does not touch a lamp-control channel.">Light On</button>
-        <button type="button" id="mhtBlackout" class="buttons" title="Dimmer and shutter to 0. Does not touch a lamp-control channel.">Light Off</button>
         <label style="min-width:auto;display:inline-flex;align-items:center;gap:5px">
           <input type="checkbox" id="mhtPolar"> Polar
         </label>
@@ -258,6 +268,22 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
           <div class="mhtRaw" id="mhtTiltRaw">&mdash;</div>
         </div>
       </div>
+
+      <fieldset class="mhtFieldset">
+        <legend>Quick Commands</legend>
+        <div class="mhtQuick" id="mhtQuick">
+          <button type="button" id="mhtLampOn" class="buttons"
+                  title="Writes the lamp channel's configured On value.">Lamp On</button>
+          <button type="button" id="mhtLampOff" class="buttons"
+                  title="Writes the lamp channel's configured Off value.">Lamp Off</button>
+          <span class="mhtQuickSep"></span>
+          <button type="button" id="mhtLightOn" class="buttons"
+                  title="Shutter open and dimmer full. Does not strike the lamp.">Beam On</button>
+          <button type="button" id="mhtBlackout" class="buttons"
+                  title="Dimmer and shutter to 0. Does not douse the lamp.">Beam Off</button>
+        </div>
+        <div class="mhtNote" id="mhtLampNote"></div>
+      </fieldset>
 
       <fieldset class="mhtFieldset">
         <legend>Declared by the Model</legend>
@@ -285,6 +311,40 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   <fieldset class="mhtFieldset">
     <legend>Requests</legend>
     <pre id="mhtLog">Idle</pre>
+  </fieldset>
+
+  <fieldset class="mhtFieldset">
+    <legend>Lamp Control</legend>
+    <p class="mhtNote">
+      Which channel strikes and douses the lamp, and the two values that do it. Not in the
+      model &mdash; xLights holds one fixed value per channel, not a selectable pair &mdash; and
+      the values are fixture-specific, so they are entered here. Leave the channel blank to
+      remove the Lamp buttons. Check your fixture's DMX chart before setting these: striking a
+      lamp takes time to restrike and costs lamp life.
+    </p>
+    <table class="mhtTable">
+      <tr><th>Fixture</th><th>Channel</th><th>On</th><th>Off</th><th></th></tr>
+      <?php foreach ($ready as $f): $lamp = $f['lamp'] ?? null; ?>
+        <tr>
+          <td><?php echo htmlspecialchars($f['name']); ?></td>
+          <form method="post">
+            <input type="hidden" name="mhtAction" value="lamp">
+            <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+            <td><input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
+                       step="1" style="width:78px" placeholder="ch"
+                       value="<?php echo $lamp ? (int) $lamp['channel'] : ''; ?>"
+                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
+            <td><input type="number" name="lampOn" min="0" max="255" step="1" style="width:72px"
+                       value="<?php echo $lamp ? (int) $lamp['onValue'] : ''; ?>"
+                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
+            <td><input type="number" name="lampOff" min="0" max="255" step="1" style="width:72px"
+                       value="<?php echo $lamp ? (int) $lamp['offValue'] : ''; ?>"
+                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
+            <td><button type="submit" class="buttons">Save</button></td>
+          </form>
+        </tr>
+      <?php endforeach; ?>
+    </table>
   </fieldset>
 
   <fieldset class="mhtFieldset">

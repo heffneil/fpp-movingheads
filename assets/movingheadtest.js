@@ -30,8 +30,9 @@ var MHT = (function () {
     var panDeg = 0, tiltDeg = 0;
     var honorZones = true;
     var polar = false;
-    var dimmerInput = null;   // held so "Lamp off" can move the control itself
+    var dimmerInput = null;   // held so the quick commands can move the control
     var shutterInput = null;
+    var rawInputs = {};       // channel offset -> its range input
     var R = 144, C = 150;     // radar geometry, in the 300x300 viewBox
 
     // Password managers latch onto bare number inputs and pop their autofill UI
@@ -277,6 +278,22 @@ var MHT = (function () {
 
     function blackout() { setLight(false); }
 
+    /**
+     * Lamp strike / douse. Only available when the fixture has lamp config,
+     * because the channel and its two values are fixture-specific and are never
+     * guessed - the wrong value on an arc lamp is not a harmless mistake.
+     */
+    function setLamp(on) {
+        if (!fx || !live || !fx.lamp) { return; }
+        var ch = fx.lamp.channel;
+        var v = on ? fx.lamp.onValue : fx.lamp.offValue;
+        vals[ch] = v;
+        var inp = rawInputs[ch];
+        if (inp) { inp.value = v; syncNumberFor(inp); }
+        log('Lamp ' + (on ? 'on' : 'off') + ': ch' + ch + ' = ' + v);
+        flush();
+    }
+
     // Move a slider's paired number field without firing its input handler,
     // which would route back through flush() and be swallowed when not live.
     function syncNumberFor(slider) {
@@ -421,55 +438,36 @@ var MHT = (function () {
 
         dimmerInput = null;
         shutterInput = null;
+        rawInputs = {};
+
+        // Order is Lamp, Dimmer, Shutter, Color: the lamp has to be lit before
+        // the dimmer means anything, and the dimmer before the shutter does.
+        if (fx.lamp) {
+            var lr = row(base + fx.lamp.channel - 1, 'Lamp', 0, 255, function (v) {
+                vals[fx.lamp.channel] = v; flush();
+            });
+            rawInputs[fx.lamp.channel] = lr.querySelector('input[type=range]');
+            sem.appendChild(lr);
+        }
 
         if (fx.dimmer) {
             var dr = row(base + fx.dimmer - 1, 'Dimmer', 0, 255, function (v) {
                 vals[fx.dimmer] = v; flush();
             });
-            dimmerInput = dr.querySelector('input');
+            dimmerInput = dr.querySelector('input[type=range]');
             sem.appendChild(dr);
         }
 
+        // Shutter is a plain slider, not open/closed buttons. It is not a two
+        // state channel: the range between closed and open is where strobe rate
+        // lives on most fixtures, and DmxShutterOnValue is frequently absent
+        // anyway. Quick Commands carries the open/closed shortcut.
         if (fx.shutter) {
-            var d = document.createElement('div');
-            d.className = 'mhtRow';
-            var on = fx.shutter.onValue;
-            d.innerHTML = '<span class="mhtCh">' + (base + fx.shutter.channel - 1) + '</span>' +
-                '<label title="Shutter">Shutter</label>';
-            if (on !== null && on !== undefined) {
-                var bOpen = document.createElement('button');
-                bOpen.type = 'button'; bOpen.textContent = 'Open';
-                var bShut = document.createElement('button');
-                bShut.type = 'button'; bShut.textContent = 'Closed'; bShut.className = 'mhtOn';
-                bOpen.addEventListener('click', function () {
-                    vals[fx.shutter.channel] = on;
-                    bOpen.className = 'mhtOn'; bShut.className = ''; flush();
-                });
-                bShut.addEventListener('click', function () {
-                    vals[fx.shutter.channel] = 0;
-                    bShut.className = 'mhtOn'; bOpen.className = ''; flush();
-                });
-                d.appendChild(bOpen); d.appendChild(bShut);
-            }
-            // Always offer the raw value too: DmxShutterOnValue is often absent,
-            // and strobe lives at values between closed and open anyway.
-            var sl = document.createElement('input');
-            sl.type = 'range'; sl.min = 0; sl.max = 255; sl.step = 1; sl.value = 0;
-            var sv = document.createElement('input');
-            sv.type = 'number'; sv.className = 'mhtVal';
-            sv.min = 0; sv.max = 255; sv.step = 1; sv.value = 0;
-            sv.setAttribute('autocomplete', 'off');
-            sv.setAttribute('data-1p-ignore', '');
-            sv.setAttribute('data-lpignore', 'true');
-            sv.setAttribute('data-bwignore', '');
-            sv.setAttribute('data-form-type', 'other');
-            bindPair(sl, sv, 255, function (v) {
-                vals[fx.shutter.channel] = v;
-                flush();
+            var sr = row(base + fx.shutter.channel - 1, 'Shutter', 0, 255, function (v) {
+                vals[fx.shutter.channel] = v; flush();
             });
-            d.appendChild(sl); d.appendChild(sv);
-            sem.appendChild(d);
-            shutterInput = sl;
+            shutterInput = sr.querySelector('input[type=range]');
+            sem.appendChild(sr);
         }
 
         if (fx.colorWheel && fx.colorWheel.positions.length) {
@@ -501,10 +499,14 @@ var MHT = (function () {
         var any = false;
         for (var o = 1; o <= fx.channelCount; o++) {
             if (fx.roles[o] !== 'raw') { continue; }
+            // shown as Lamp above; not repeated here
+            if (fx.lamp && o === fx.lamp.channel) { continue; }
             any = true;
             (function (off) {
-                raw.appendChild(row(base + off - 1, fx.labels[off] || ('Channel ' + off),
-                    0, 255, function (v) { vals[off] = v; flush(); }, true));
+                var r = row(base + off - 1, fx.labels[off] || ('Channel ' + off),
+                    0, 255, function (v) { vals[off] = v; flush(); }, true);
+                rawInputs[off] = r.querySelector('input[type=range]');
+                raw.appendChild(r);
             })(o);
         }
         if (!any) {
@@ -546,10 +548,23 @@ var MHT = (function () {
                 c.disabled = !on;
             });
         });
-        ['mhtCenter', 'mhtLightOn', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
+        ['mhtCenter', 'mhtLampOn', 'mhtLampOff', 'mhtLightOn', 'mhtBlackout', 'mhtPolar', 'mhtPanDeg', 'mhtTiltDeg', 'mhtHonor'].forEach(function (id) {
             var el = $(id);
             if (el) { el.disabled = !on; }
         });
+        // No lamp config means no lamp command, in control or not.
+        var haveLamp = !!(fx && fx.lamp);
+        ['mhtLampOn', 'mhtLampOff'].forEach(function (id) {
+            var el = $(id);
+            if (el) { el.disabled = !on || !haveLamp; }
+        });
+        var note = $('mhtLampNote');
+        if (note) {
+            note.textContent = haveLamp
+                ? ('Lamp on channel ' + fx.lamp.channel + ': on = ' + fx.lamp.onValue +
+                   ', off = ' + fx.lamp.offValue)
+                : 'No lamp channel configured for this fixture - set one under Lamp Control below.';
+        }
         var pad = $('mhtRadar');
         if (pad) { pad.classList.toggle('mhtInert', !on); }
         var wrap = $('mhtRadarWrap');
@@ -605,6 +620,8 @@ var MHT = (function () {
         }
         $('mhtRelease').addEventListener('click', release);
         $('mhtCenter').addEventListener('click', center);
+        $('mhtLampOn').addEventListener('click', function () { setLamp(true); });
+        $('mhtLampOff').addEventListener('click', function () { setLamp(false); });
         $('mhtLightOn').addEventListener('click', function () { setLight(true); });
         $('mhtBlackout').addEventListener('click', blackout);
         var z = $('mhtHonor');
