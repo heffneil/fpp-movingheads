@@ -121,7 +121,18 @@ class FixtureStore
      * something to guess at - so they are entered, never inferred. Absent lamp
      * config means no lamp buttons at all.
      */
-    public static function setLamp(string $name, ?int $channel, ?int $onValue, ?int $offValue): void
+    /**
+     * Default restrike cooldown, in seconds.
+     *
+     * A discharge lamp must cool before it will strike again, and forcing it
+     * shortens lamp life or fails outright. Five minutes is a conservative
+     * middle ground - it is NOT read from the fixture, so it is editable and
+     * should be set from the fixture's own manual.
+     */
+    const DEFAULT_COOLDOWN = 300;
+
+    public static function setLamp(string $name, ?int $channel, ?int $onValue, ?int $offValue,
+                                   ?int $cooldownSec = null): void
     {
         $out = [];
         foreach (self::fixtures() as $f) {
@@ -129,16 +140,58 @@ class FixtureStore
                 if ($channel === null || $channel < 1) {
                     unset($f['lamp']);
                 } else {
+                    $existing = $f['lamp'] ?? [];
                     $f['lamp'] = [
                         'channel' => $channel,
                         'onValue' => max(0, min(255, (int) $onValue)),
                         'offValue' => max(0, min(255, (int) $offValue)),
+                        // preserved across an edit: a cooldown in progress is a
+                        // property of the hardware, not of this config form
+                        'cooldownSec' => $cooldownSec !== null
+                            ? max(0, $cooldownSec)
+                            : (int) ($existing['cooldownSec'] ?? self::DEFAULT_COOLDOWN),
+                        'lastOffAt' => (int) ($existing['lastOffAt'] ?? 0),
                     ];
                 }
             }
             $out[] = $f;
         }
         self::saveFixtures($out);
+    }
+
+    /**
+     * Record that the lamp was just switched off, so the restrike cooldown
+     * survives a page reload and applies in any browser. Stored server-side
+     * deliberately: the cooling lamp is a shared physical fact, not a per-tab one.
+     */
+    public static function markLampOff(string $name): void
+    {
+        $out = [];
+        foreach (self::fixtures() as $f) {
+            if ($f['name'] === $name && isset($f['lamp'])) {
+                $f['lamp']['lastOffAt'] = time();
+            }
+            $out[] = $f;
+        }
+        self::saveFixtures($out);
+    }
+
+    /** Seconds still to wait before a restrike, 0 when clear. */
+    public static function cooldownRemaining(array $fixture): int
+    {
+        $lamp = $fixture['lamp'] ?? null;
+        if (!$lamp) {
+            return 0;
+        }
+        $secs = (int) ($lamp['cooldownSec'] ?? self::DEFAULT_COOLDOWN);
+        $last = (int) ($lamp['lastOffAt'] ?? 0);
+        if ($secs <= 0 || $last <= 0) {
+            return 0;
+        }
+        // Capped at the configured span as well as floored at zero: an FPP that
+        // has no RTC picks up the real time from NTP after boot, which can leave
+        // a timestamp in the future and would otherwise stretch the wait.
+        return (int) max(0, min($secs, $secs - (time() - $last)));
     }
 
     /** @return array<string,int> controller name => base channel */

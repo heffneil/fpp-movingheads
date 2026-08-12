@@ -155,3 +155,45 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
    once the fixture is on the wall. */
 .mhtRadarDir { font-size: 11px; font-weight: 500; letter-spacing: .5px;
                fill: currentColor; opacity: .72; }
+
+/* A discharge lamp is the one thing in here that a wrong click can actually
+   damage, so the warning is always on screen rather than in the help page. */
+.mhtLampWarn {
+  color: #ff6b6b;
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 70ch;
+  margin: 6px 0 0;
+}
+
+.mhtCooldown {
+  margin: 6px 0 0;
+  padding: 5px 9px;
+  border-radius: 5px;
+  border: 1px solid #a33;
+  background: rgba(170, 40, 40, 0.16);
+  color: #ff8f8f;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+
+.mhtLampErr {
+  color: #ff6b6b;
+  font-size: 12px;
+  flex: 1 1 22ch;
+}
+
+.mhtLampHint {
+  flex: 1 1 auto;
+  margin: 0;
+  opacity: 0.75;
+}
+
+.mhtPadCaption {
+  margin: 5px 0 0;
+  font-size: 11px;
+  opacity: .65;
+}
+
+.mhtPadCaption span { white-space: nowrap; }

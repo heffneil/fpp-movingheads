@@ -66,20 +66,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'lamp') {
         $n = (string) ($_POST['fixture'] ?? '');
         $ch = trim((string) ($_POST['lampChannel'] ?? ''));
-        FixtureStore::setLamp(
-            $n,
-            $ch === '' ? null : (int) $ch,
-            (int) ($_POST['lampOn'] ?? 0),
-            (int) ($_POST['lampOff'] ?? 0)
-        );
-        $notices[] = $ch === ''
-            ? 'Lamp control cleared for ' . htmlspecialchars($n) . '.'
-            : 'Lamp control for ' . htmlspecialchars($n) . ' set to channel ' . (int) $ch . '.';
+        $onRaw = trim((string) ($_POST['lampOn'] ?? ''));
+        $offRaw = trim((string) ($_POST['lampOff'] ?? ''));
+        $lampFailed = false;
+        // A blank channel means "no lamp control", which is a legitimate thing to
+        // want - but only when the values are blank too. Values with no channel is
+        // someone filling the row in and missing a box, and silently storing
+        // "no lamp" while reporting success is how that goes unnoticed.
+        if ($ch === '' && ($onRaw !== '' || $offRaw !== '')) {
+            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n)
+                . ': a channel number is required. Clear the On and Off values too if you '
+                . 'meant to remove lamp control.';
+            $lampFailed = true;
+        } elseif ($ch !== '' && $onRaw === '' && $offRaw === '') {
+            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n)
+                . ': channel ' . (int) $ch . ' needs both an On and an Off value.';
+            $lampFailed = true;
+        }
+        if (!$lampFailed) {
+            FixtureStore::setLamp(
+                $n,
+                $ch === '' ? null : (int) $ch,
+                (int) ($_POST['lampOn'] ?? 0),
+                (int) ($_POST['lampOff'] ?? 0),
+                isset($_POST['lampCooldown']) ? (int) $_POST['lampCooldown'] : null
+            );
+            $notices[] = $ch === ''
+                ? 'Lamp control cleared for ' . htmlspecialchars($n) . '.'
+                : 'Lamp control for ' . htmlspecialchars($n) . ' set to channel ' . (int) $ch . '.';
+        }
+    } elseif ($action === 'lampoff') {
+        // Client tells us the lamp was just doused so the restrike cooldown is
+        // recorded server-side and survives a reload or a different browser.
+        FixtureStore::markLampOff((string) ($_POST['fixture'] ?? ''));
+        $silent = true;
     } elseif ($action === 'remove') {
         $n = (string) ($_POST['fixture'] ?? '');
         FixtureStore::remove($n);
         $notices[] = 'Removed ' . htmlspecialchars($n) . '.';
     }
+}
+
+// The lamp form saves through fetch() so it does not reload the page and drop
+// control. That only works honestly if the reply says whether the save actually
+// happened - otherwise a rejected save still logs "saved".
+//
+// Emitted as a comment marker inside the page rather than as a JSON response:
+// this file is included by plugin.php well after FPP has sent its own page shell,
+// so headers are long gone and a Content-Type of application/json is not
+// available. The client pulls the marker out of the text it gets back.
+if (!empty($_POST['mhtAjax'])) {
+    echo "\n<!--MHT-RESULT:" . json_encode([
+        'ok' => empty($problems),
+        'problems' => array_map('html_entity_decode', $problems),
+        'notices' => array_map('html_entity_decode', $notices),
+    ]) . "-->\n";
+    return;
 }
 
 $bases = FixtureStore::bases();
@@ -92,6 +134,7 @@ foreach ($fixtures as $f) {
     $f['absoluteStart'] = FixtureStore::absoluteStart($f, $bases);
     // null means we could not ask this instance; that is not a fault, so the UI
     // stays quiet rather than crying wolf.
+    $f['cooldownRemaining'] = FixtureStore::cooldownRemaining($f);
     $f['emittedHere'] = $f['absoluteStart']
         ? LocalOutputs::covers((int) $f['absoluteStart'], (int) $f['channelCount'])
         : null;
@@ -234,6 +277,10 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
            different range gets a correctly proportioned grid rather than one
            hardcoded to 8x8. -->
       <svg id="mhtRadar" class="mhtRadar" viewBox="0 0 320 240"></svg>
+      <!-- Outside the SVG so it can wrap: on a fixture with a narrow reachable
+           pan span the pad is only a few blocks wide and this text does not fit
+           across it. -->
+      <div class="mhtNote mhtPadCaption" id="mhtPadCaption"></div>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
       </div>
@@ -266,6 +313,12 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   title="Writes the lamp channel's configured Off value.">Lamp Off</button>
         </div>
         <div class="mhtNote" id="mhtLampNote"></div>
+        <div class="mhtLampWarn">
+          Do not cycle the lamp repeatedly. After a Lamp Off the lamp must cool before it will
+          strike again &mdash; forcing an early restrike shortens lamp life or simply fails.
+          Lamp On is held until the cooldown below has elapsed.
+        </div>
+        <div class="mhtCooldown" id="mhtCooldown" hidden></div>
       </fieldset>
 
       <fieldset class="mhtFieldset">
@@ -304,18 +357,34 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       Which channel strikes and douses the lamp, and the two values that do it. Not in the
       model &mdash; xLights holds one fixed value per channel, not a selectable pair &mdash; and
       the values are fixture-specific, so they are entered here. Leave the channel blank to
-      remove the Lamp buttons. Check your fixture's DMX chart before setting these: striking a
-      lamp takes time to restrike and costs lamp life.
+      remove the Lamp buttons &mdash; clear the values with it. Check your fixture's DMX chart
+      before setting these: striking a lamp takes time to restrike and costs lamp life, which is
+      what the cooldown enforces.
     </p>
-    <?php foreach ($resolved as $f): $lamp = $f['lamp'] ?? null; ?>
+    <?php foreach ($resolved as $f):
+        $lamp = $f['lamp'] ?? null;
+        // The channel number IS in the model - xLights labels it in NodeNames -
+        // so it is offered rather than left for you to find in the raw list. Only
+        // the values are genuinely fixture-specific.
+        // labels is keyed by channel number, 1..N - not 0-based.
+        $guess = 0;
+        $guessLabel = '';
+        foreach (($f['labels'] ?? []) as $ch1 => $label) {
+            if (preg_match('/lamp/i', (string) $label)) {
+                $guess = (int) $ch1;
+                $guessLabel = (string) $label;
+                break;
+            }
+        }
+    ?>
       <form method="post" class="mhtLampRow">
         <input type="hidden" name="mhtAction" value="lamp">
         <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
         <span class="mhtLampName"><?php echo htmlspecialchars($f['name']); ?></span>
         <label>Channel</label>
         <input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
-               step="1" style="width:74px" placeholder="ch"
-               value="<?php echo $lamp ? (int) $lamp['channel'] : ''; ?>"
+               step="1" style="width:74px" placeholder="ch" required
+               value="<?php echo $lamp ? (int) $lamp['channel'] : ($guess ?: ''); ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <label>On</label>
         <input type="number" name="lampOn" min="0" max="255" step="1" style="width:70px"
@@ -325,7 +394,15 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <input type="number" name="lampOff" min="0" max="255" step="1" style="width:70px"
                value="<?php echo $lamp ? (int) $lamp['offValue'] : ''; ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+        <label title="Seconds the lamp must cool before it may be struck again. Set this from your fixture's manual.">Cooldown s</label>
+        <input type="number" name="lampCooldown" min="0" max="3600" step="10" style="width:74px"
+               value="<?php echo $lamp ? (int) ($lamp['cooldownSec'] ?? 300) : 300; ?>"
+               autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <button type="submit" class="buttons">Save</button>
+        <?php if (!$lamp && $guess): ?>
+          <span class="mhtNote mhtLampHint">ch <?php echo $guess; ?> is labelled
+            &ldquo;<?php echo htmlspecialchars($guessLabel); ?>&rdquo; in the model</span>
+        <?php endif; ?>
         <span class="mhtNote mhtLampSaved" hidden>Saved</span>
       </form>
     <?php endforeach; ?>
