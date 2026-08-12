@@ -98,6 +98,20 @@ var MHT = (function () {
         }
     }
 
+    /**
+     * Inverse of degTo16: a coarse/fine channel pair back to degrees.
+     * Mirrors the same orientHome offset and reverse handling, so a value that
+     * was written and then read back yields the angle it came from.
+     */
+    function degFrom16(v, motor) {
+        var raw = (v[motor.coarse] << 8) | (motor.fine > 0 ? v[motor.fine] : 0);
+        var perDeg = 65535 / motor.range;
+        var pos = (raw / perDeg) - (motor.orientHome || 0);
+        if (motor.reverse) { pos = -pos; }
+        if (motor.upsideDown) { pos = -pos; }
+        return pos;
+    }
+
     function panLimit() { return fx.pan ? Math.min(180, fx.pan.range / 2) : 180; }
     function tiltLimit() { return fx.tilt ? Math.min(180, fx.tilt.range / 2) : 135; }
 
@@ -225,6 +239,7 @@ var MHT = (function () {
             Object.keys(byValue).forEach(function (v) {
                 put('/api/overlays/range/' + byValue[v].join(',') + '/' + v);
             });
+            saveVals();
         });
     }
 
@@ -340,15 +355,77 @@ var MHT = (function () {
         put(releasePath());
     }
 
-    // Best-effort release when the tab goes away. sendBeacon cannot issue a
-    // PUT, so this is a keepalive fetch; if even that is dropped the range
-    // stays until someone releases it, which is why the button exists.
-    function releaseOnUnload() {
-        if (!live) { return; }
-        live = false;
+    /**
+     * On unload: go dark, but do NOT release.
+     *
+     * Releasing is not a neutral act. Once the ranges are gone the channels fall
+     * back to fppd's underlying data, which with no sequence playing is 0 - and
+     * DMX 0 on pan is not center, it is one end of travel. So releasing on unload
+     * made every page refresh swing the head to a limit, and the reloaded page
+     * then claimed center, disagreeing with the fixture until you took control
+     * and it snapped there. Two unwanted movements per refresh.
+     *
+     * Unload cannot tell a refresh from closing the tab, so it does the thing
+     * that is right for both: kill the light, leave the aim alone. A refresh
+     * becomes invisible to the fixture, and a forgotten tab leaves it dark rather
+     * than lit. The Release button still fully releases, which is its job.
+     */
+    function blackoutOnUnload() {
+        if (!live || !fx) { return; }
+        var parts = [];
+        if (fx.dimmer) {
+            parts.push((base + fx.dimmer - 1) + '-' + (base + fx.dimmer - 1));
+        }
+        if (fx.shutter) {
+            parts.push((base + fx.shutter.channel - 1) + '-' + (base + fx.shutter.channel - 1));
+        }
+        if (!parts.length) { return; }
         try {
-            fetch(releasePath(), { method: 'PUT', body: '{}', keepalive: true });
+            fetch('/api/overlays/range/' + parts.join(',') + '/0',
+                  { method: 'PUT', body: '{}', keepalive: true });
         } catch (e) { /* nothing useful to do at unload */ }
+    }
+
+    /**
+     * Remember the values per fixture so a reload can show the truth.
+     *
+     * fppd offers no way to read back the final channel data - overlay ranges
+     * bypass the model buffers entirely - so the page cannot ask the device where
+     * a fixture is. Storing what we last wrote is the closest available answer,
+     * and it is what makes take-control after a refresh a no-op rather than a
+     * jump to center.
+     */
+    function valsKey() { return 'mht:vals:' + (fx ? fx.name : '?'); }
+
+    var saveTimer = null;
+    function saveVals() {
+        if (!fx) { return; }
+        if (saveTimer) { return; }
+        // debounced: flush can run 25 times a second during a drag
+        saveTimer = window.setTimeout(function () {
+            saveTimer = null;
+            try {
+                window.localStorage.setItem(valsKey(), JSON.stringify(vals));
+            } catch (e) { /* private browsing, quota - not worth failing over */ }
+        }, 400);
+    }
+
+    function loadVals() {
+        if (!fx) { return false; }
+        try {
+            var raw = window.localStorage.getItem(valsKey());
+            if (!raw) { return false; }
+            var v = JSON.parse(raw);
+            if (!Array.isArray(v) || v.length !== fx.channelCount + 1) { return false; }
+            for (var i = 0; i <= fx.channelCount; i++) {
+                vals[i] = Math.max(0, Math.min(255, parseInt(v[i], 10) || 0));
+            }
+            // Unload blacked these out, so the fixture really is dark now -
+            // restoring the old values here would misreport it.
+            if (fx.dimmer) { vals[fx.dimmer] = 0; }
+            if (fx.shutter) { vals[fx.shutter.channel] = 0; }
+            return true;
+        } catch (e) { return false; }
     }
 
     /* ---------------------------------------------------------------- Radar */
@@ -572,11 +649,22 @@ var MHT = (function () {
         vals = new Array(fx.channelCount + 1);
         sent = new Array(fx.channelCount + 1);
         for (var o = 0; o <= fx.channelCount; o++) { vals[o] = 0; sent[o] = -1; }
-        panDeg = 0; tiltDeg = 0;
+
+        // Restore what was last written so the page reports where the fixture
+        // actually is. Without this a refresh showed center while the head was
+        // wherever it had been left, and taking control then moved it.
+        var restored = loadVals();
+        panDeg = 0;
+        tiltDeg = 0;
+        if (restored) {
+            if (fx.pan) { panDeg = degFrom16(vals, fx.pan); }
+            if (fx.tilt) { tiltDeg = degFrom16(vals, fx.tilt); }
+        }
         buildSurface();
+        placeDot();
         recompute();
-        setAim(0, 0);
         setControlsEnabled(false);
+        if (restored) { log('Restored last known position for ' + fx.name); }
         $('mhtRange').textContent = base
             ? (base + ' – ' + (base + fx.channelCount - 1))
             : 'No absolute channel - set a controller base';
@@ -713,8 +801,8 @@ var MHT = (function () {
             flush();   // settle the fine channels now the drag has ended
         });
 
-        window.addEventListener('beforeunload', releaseOnUnload);
-        window.addEventListener('pagehide', releaseOnUnload);
+        window.addEventListener('beforeunload', blackoutOnUnload);
+        window.addEventListener('pagehide', blackoutOnUnload);
 
         wireLampForm();
         if (sel && sel.options.length) { selectFixture(sel.value); }
