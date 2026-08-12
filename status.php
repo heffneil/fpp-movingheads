@@ -173,6 +173,13 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <button type="button" id="mhtRelease" class="buttons">Release</button>
   </div>
 
+  <div class="mhtStage">
+    <div id="mhtMask" class="mhtMask">
+      <div class="mhtMaskInner">
+        <button type="button" id="mhtMaskBtn" class="buttons">Take control</button>
+        <div class="mhtMaskNote">nothing is sent to the fixture until you do</div>
+      </div>
+    </div>
   <div class="mhtWrap">
     <div id="mhtRadarWrap">
       <svg id="mhtRadar" class="mhtRadar" viewBox="0 0 300 300" width="300" height="300">
@@ -236,6 +243,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </fieldset>
     </div>
   </div>
+
+  </div><!-- /mhtStage -->
 
   <fieldset class="mhtFieldset">
     <legend>requests</legend>
