@@ -139,3 +139,11 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 .mhtQuick button { padding: 4px 13px; }
 .mhtQuickSep { width: 1px; height: 20px; background: rgba(128,128,128,.4); margin: 0 4px; }
 #mhtLampNote { margin-top: 7px; }
+
+/* One form per fixture, laid out with flex. Deliberately not a table: a <form>
+   is not valid inside <tr>, and the parser hoists it out, orphaning the inputs
+   from the form entirely. */
+.mhtLampRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+.mhtLampRow label { font-size: 12px; opacity: .7; margin: 0; }
+.mhtLampName { min-width: 74px; font-size: 13px; }
+.mhtLampSaved { color: #2e8b57; }
