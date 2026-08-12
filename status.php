@@ -296,6 +296,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <pre id="mhtLog">Idle</pre>
   </fieldset>
 
+  <?php endif; ?>
+
   <fieldset class="mhtFieldset">
     <legend>Lamp Control</legend>
     <p class="mhtNote">
@@ -305,7 +307,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       remove the Lamp buttons. Check your fixture's DMX chart before setting these: striking a
       lamp takes time to restrike and costs lamp life.
     </p>
-    <?php foreach ($ready as $f): $lamp = $f['lamp'] ?? null; ?>
+    <?php foreach ($resolved as $f): $lamp = $f['lamp'] ?? null; ?>
       <form method="post" class="mhtLampRow">
         <input type="hidden" name="mhtAction" value="lamp">
         <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
@@ -389,5 +391,4 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
 
   <script>window.MHT_FIXTURES = <?php echo json_encode($ready, JSON_UNESCAPED_SLASHES); ?>;</script>
   <script><?php readfile(__DIR__ . '/assets/movingheadtest.js'); ?></script>
-  <?php endif; ?>
 </div>
