@@ -322,29 +322,28 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       remove the Lamp buttons. Check your fixture's DMX chart before setting these: striking a
       lamp takes time to restrike and costs lamp life.
     </p>
-    <table class="mhtTable">
-      <tr><th>Fixture</th><th>Channel</th><th>On</th><th>Off</th><th></th></tr>
-      <?php foreach ($ready as $f): $lamp = $f['lamp'] ?? null; ?>
-        <tr>
-          <td><?php echo htmlspecialchars($f['name']); ?></td>
-          <form method="post">
-            <input type="hidden" name="mhtAction" value="lamp">
-            <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
-            <td><input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
-                       step="1" style="width:78px" placeholder="ch"
-                       value="<?php echo $lamp ? (int) $lamp['channel'] : ''; ?>"
-                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
-            <td><input type="number" name="lampOn" min="0" max="255" step="1" style="width:72px"
-                       value="<?php echo $lamp ? (int) $lamp['onValue'] : ''; ?>"
-                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
-            <td><input type="number" name="lampOff" min="0" max="255" step="1" style="width:72px"
-                       value="<?php echo $lamp ? (int) $lamp['offValue'] : ''; ?>"
-                       autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></td>
-            <td><button type="submit" class="buttons">Save</button></td>
-          </form>
-        </tr>
-      <?php endforeach; ?>
-    </table>
+    <?php foreach ($ready as $f): $lamp = $f['lamp'] ?? null; ?>
+      <form method="post" class="mhtLampRow">
+        <input type="hidden" name="mhtAction" value="lamp">
+        <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+        <span class="mhtLampName"><?php echo htmlspecialchars($f['name']); ?></span>
+        <label>Channel</label>
+        <input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
+               step="1" style="width:74px" placeholder="ch"
+               value="<?php echo $lamp ? (int) $lamp['channel'] : ''; ?>"
+               autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+        <label>On</label>
+        <input type="number" name="lampOn" min="0" max="255" step="1" style="width:70px"
+               value="<?php echo $lamp ? (int) $lamp['onValue'] : ''; ?>"
+               autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+        <label>Off</label>
+        <input type="number" name="lampOff" min="0" max="255" step="1" style="width:70px"
+               value="<?php echo $lamp ? (int) $lamp['offValue'] : ''; ?>"
+               autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+        <button type="submit" class="buttons">Save</button>
+        <span class="mhtNote mhtLampSaved" hidden>Saved</span>
+      </form>
+    <?php endforeach; ?>
   </fieldset>
 
   <fieldset class="mhtFieldset">

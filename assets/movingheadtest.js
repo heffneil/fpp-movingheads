@@ -443,7 +443,7 @@ var MHT = (function () {
         // Order is Lamp, Dimmer, Shutter, Color: the lamp has to be lit before
         // the dimmer means anything, and the dimmer before the shutter does.
         if (fx.lamp) {
-            var lr = row(base + fx.lamp.channel - 1, 'Lamp', 0, 255, function (v) {
+            var lr = row(base + fx.lamp.channel - 1, 'Lamp', vals[fx.lamp.channel] || 0, 255, function (v) {
                 vals[fx.lamp.channel] = v; flush();
             });
             rawInputs[fx.lamp.channel] = lr.querySelector('input[type=range]');
@@ -451,7 +451,7 @@ var MHT = (function () {
         }
 
         if (fx.dimmer) {
-            var dr = row(base + fx.dimmer - 1, 'Dimmer', 0, 255, function (v) {
+            var dr = row(base + fx.dimmer - 1, 'Dimmer', vals[fx.dimmer] || 0, 255, function (v) {
                 vals[fx.dimmer] = v; flush();
             });
             dimmerInput = dr.querySelector('input[type=range]');
@@ -463,7 +463,7 @@ var MHT = (function () {
         // lives on most fixtures, and DmxShutterOnValue is frequently absent
         // anyway. Quick Commands carries the open/closed shortcut.
         if (fx.shutter) {
-            var sr = row(base + fx.shutter.channel - 1, 'Shutter', 0, 255, function (v) {
+            var sr = row(base + fx.shutter.channel - 1, 'Shutter', vals[fx.shutter.channel] || 0, 255, function (v) {
                 vals[fx.shutter.channel] = v; flush();
             });
             shutterInput = sr.querySelector('input[type=range]');
@@ -504,7 +504,7 @@ var MHT = (function () {
             any = true;
             (function (off) {
                 var r = row(base + off - 1, fx.labels[off] || ('Channel ' + off),
-                    0, 255, function (v) { vals[off] = v; flush(); }, true);
+                    vals[off] || 0, 255, function (v) { vals[off] = v; flush(); }, true);
                 rawInputs[off] = r.querySelector('input[type=range]');
                 raw.appendChild(r);
             })(o);
@@ -597,6 +597,60 @@ var MHT = (function () {
         log('Selected ' + fx.name + ' (' + fx.channelCount + ' channels)');
     }
 
+    /**
+     * Save the lamp form without navigating.
+     *
+     * A normal form POST reloads the page, and a reload drops every bit of
+     * client state - including being in control, which pagehide then releases on
+     * the way out. Discovering the lamp values is something you do *while*
+     * testing, so losing control to record them is exactly the wrong moment.
+     * The same POST goes through fetch, the descriptor is updated in place, and
+     * the surface is rebuilt from current values.
+     */
+    function wireLampForm() {
+        var table = document.querySelectorAll('.mhtFieldset form[method="post"]');
+        Array.prototype.forEach.call(table, function (form) {
+            var action = form.querySelector('input[name="mhtAction"]');
+            if (!action || action.value !== 'lamp') { return; }
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var fd = new FormData(form);
+                var name = fd.get('fixture');
+                fetch(window.location.href, { method: 'POST', body: fd })
+                    .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+                    .then(function () {
+                        var ch = parseInt(fd.get('lampChannel'), 10);
+                        var target = null;
+                        (window.MHT_FIXTURES || []).forEach(function (f) {
+                            if (f.name === name) { target = f; }
+                        });
+                        if (target) {
+                            if (isNaN(ch) || ch < 1) {
+                                delete target.lamp;
+                            } else {
+                                target.lamp = {
+                                    channel: ch,
+                                    onValue: parseInt(fd.get('lampOn'), 10) || 0,
+                                    offValue: parseInt(fd.get('lampOff'), 10) || 0
+                                };
+                            }
+                        }
+                        if (fx && fx.name === name) {
+                            buildSurface();
+                            setControlsEnabled(live);
+                        }
+                        var flag = form.querySelector('.mhtLampSaved');
+                        if (flag) {
+                            flag.hidden = false;
+                            window.setTimeout(function () { flag.hidden = true; }, 2500);
+                        }
+                        log('Lamp config saved for ' + name + (live ? ' - still in control' : ''));
+                    })
+                    .catch(function (err) { log('FAIL saving lamp config: ' + err); });
+            });
+        });
+    }
+
     function init() {
         // plugin.php auto-includes this file on every render of any page in the
         // plugin, including status.php with no fixtures imported yet and
@@ -673,6 +727,7 @@ var MHT = (function () {
         window.addEventListener('beforeunload', releaseOnUnload);
         window.addEventListener('pagehide', releaseOnUnload);
 
+        wireLampForm();
         if (sel && sel.options.length) { selectFixture(sel.value); }
     }
 
