@@ -229,6 +229,53 @@ var MHT = (function () {
         });
     }
 
+    /**
+     * Kill the light NOW - dimmer and shutter to zero.
+     *
+     * Deliberately does NOT go through flush(), which returns early unless the
+     * page is "in control". That gate is right for ordinary edits and wrong
+     * here: the moment you most need a blackout is when a fixture is still lit
+     * from ranges held by a previous session and you have not taken control,
+     * which is exactly when flush() would have silently done nothing.
+     *
+     * It also does not take control first, because that would assert every
+     * channel including pan and tilt - a blackout should stop light, not move
+     * the head.
+     *
+     * Note this is a blackout, not a lamp off: it does not touch a lamp-control
+     * channel (often labelled "Lamp" or "Lamp / Reset"), which on many fixtures
+     * strikes or douses the arc lamp itself and is not something to toggle
+     * casually. Use that channel's own slider if you really mean it.
+     */
+    function blackout() {
+        if (!fx) { return; }
+        var parts = [];
+        if (fx.dimmer) {
+            vals[fx.dimmer] = 0;
+            sent[fx.dimmer] = 0;
+            parts.push((base + fx.dimmer - 1) + '-' + (base + fx.dimmer - 1));
+            if (dimmerInput) { dimmerInput.value = 0; syncNumberFor(dimmerInput); }
+        }
+        if (fx.shutter) {
+            vals[fx.shutter.channel] = 0;
+            sent[fx.shutter.channel] = 0;
+            parts.push((base + fx.shutter.channel - 1) + '-' + (base + fx.shutter.channel - 1));
+            if (shutterInput) { shutterInput.value = 0; syncNumberFor(shutterInput); }
+        }
+        if (parts.length) {
+            put('/api/overlays/range/' + parts.join(',') + '/0');
+            log('--- blackout: dimmer and shutter to 0');
+        }
+    }
+
+    // Move a slider's paired number field without firing its input handler,
+    // which would route back through flush() and be swallowed when not live.
+    function syncNumberFor(slider) {
+        var row = slider.closest('.mhtRow');
+        var num = row ? row.querySelector('input[type=number]') : null;
+        if (num) { num.value = slider.value; }
+    }
+
     function takeControl() {
         if (!fx || !base) { return; }
         live = true;
@@ -506,26 +553,7 @@ var MHT = (function () {
         $('mhtTake').addEventListener('click', takeControl);
         $('mhtRelease').addEventListener('click', release);
         $('mhtCenter').addEventListener('click', center);
-        // Update the two inputs in place rather than rebuilding the surface:
-        // buildSurface() renders every slider at 0, so rebuilding here would
-        // show every other channel as 0 while its real value was still live.
-        $('mhtLampOff').addEventListener('click', function () {
-            if (fx.dimmer) {
-                vals[fx.dimmer] = 0;
-                if (dimmerInput) {
-                    dimmerInput.value = 0;
-                    dimmerInput.dispatchEvent(new Event('input'));
-                }
-            }
-            if (fx.shutter) {
-                vals[fx.shutter.channel] = 0;
-                if (shutterInput) {
-                    shutterInput.value = 0;
-                    shutterInput.dispatchEvent(new Event('input'));
-                }
-            }
-            flush();
-        });
+        $('mhtBlackout').addEventListener('click', blackout);
         var z = $('mhtHonor');
         if (z) {
             z.addEventListener('change', function () { honorZones = z.checked; flush(); });

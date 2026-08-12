@@ -191,7 +191,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       </svg>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
-        <button type="button" id="mhtLampOff" class="buttons">Lamp off</button>
+        <button type="button" id="mhtBlackout" class="buttons" title="Dimmer and shutter to 0. Works even when not in control. Does not touch a lamp-control channel.">Blackout</button>
         <label style="min-width:auto;display:inline-flex;align-items:center;gap:5px">
           <input type="checkbox" id="mhtPolar"> polar
         </label>
