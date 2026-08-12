@@ -86,15 +86,16 @@ var MHT = (function () {
     function recompute() {
         applyMotor(fx.pan, panDeg);
         applyMotor(fx.tilt, tiltDeg);
+        // Only the coarse channel is shown. The fine channel is still written -
+        // 16-bit precision is unchanged - but two numbers per axis read as noise
+        // when what you want at a glance is "what DMX value is on pan".
         if (fx.pan) {
             setFieldValue($('mhtPanDeg'), Math.round(panDeg));
-            $('mhtPanRaw').textContent = 'ch' + fx.pan.coarse + '=' + vals[fx.pan.coarse] +
-                (fx.pan.fine > 0 ? ' ch' + fx.pan.fine + '=' + vals[fx.pan.fine] : '');
+            $('mhtPanRaw').textContent = 'DMX ch' + fx.pan.coarse + ' = ' + vals[fx.pan.coarse];
         }
         if (fx.tilt) {
             setFieldValue($('mhtTiltDeg'), Math.round(tiltDeg));
-            $('mhtTiltRaw').textContent = 'ch' + fx.tilt.coarse + '=' + vals[fx.tilt.coarse] +
-                (fx.tilt.fine > 0 ? ' ch' + fx.tilt.fine + '=' + vals[fx.tilt.fine] : '');
+            $('mhtTiltRaw').textContent = 'DMX ch' + fx.tilt.coarse + ' = ' + vals[fx.tilt.coarse];
         }
     }
 
