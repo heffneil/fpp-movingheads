@@ -229,22 +229,11 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     </div>
   <div class="mhtWrap">
     <div id="mhtRadarWrap">
-      <svg id="mhtRadar" class="mhtRadar" viewBox="0 0 300 300" width="300" height="300">
-        <circle class="mhtRadarBg" cx="150" cy="150" r="144"/>
-        <circle class="mhtRadarRing" cx="150" cy="150" r="108"/>
-        <circle class="mhtRadarRing" cx="150" cy="150" r="72"/>
-        <circle class="mhtRadarRing" cx="150" cy="150" r="36"/>
-        <line class="mhtRadarAxis" x1="150" y1="6" x2="150" y2="294"/>
-        <line class="mhtRadarAxis" x1="6" y1="150" x2="294" y2="150"/>
-        <text class="mhtRadarDir"  x="150" y="22"  text-anchor="middle">BACK</text>
-        <text class="mhtRadarTick" x="150" y="34"  text-anchor="middle">tilt +</text>
-        <text class="mhtRadarTick" x="150" y="272" text-anchor="middle">tilt &minus;</text>
-        <text class="mhtRadarDir"  x="150" y="286" text-anchor="middle">FRONT</text>
-        <text class="mhtRadarTick" x="276" y="146" text-anchor="middle">pan +</text>
-        <text class="mhtRadarTick" x="26" y="146" text-anchor="middle">pan &minus;</text>
-        <line class="mhtRay" id="mhtRay" x1="150" y1="150" x2="150" y2="150"/>
-        <circle class="mhtDot" id="mhtDot" cx="150" cy="150" r="7"/>
-      </svg>
+      <!-- Built entirely in JS: the grid extent and cell count come from the
+           selected fixture's own pan/tilt range of motion, so a fixture with a
+           different range gets a correctly proportioned grid rather than one
+           hardcoded to 8x8. -->
+      <svg id="mhtRadar" class="mhtRadar" viewBox="0 0 320 240"></svg>
       <div class="mhtRow" style="margin-top:8px">
         <button type="button" id="mhtCenter" class="buttons">Center</button>
       </div>
