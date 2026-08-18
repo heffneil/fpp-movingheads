@@ -54,7 +54,12 @@ if [ -r "${FIXTURES}" ]; then
     ' "${FIXTURES}" "${PLUGINCFG}" 2>/dev/null || true)
 
     if [ -n "${RANGES}" ]; then
-        curl -s -X PUT -H 'Content-Type: application/json' -d '{}' \
+        # Bounded: uninstall runs from a hook, and an fppd that is wedged or
+        # mid-restart would otherwise stall it indefinitely. Releasing ranges is
+        # a courtesy - fppd drops them on restart anyway - so a timeout here is
+        # not worth blocking a removal over.
+        curl -s --connect-timeout 2 --max-time 10 \
+             -X PUT -H 'Content-Type: application/json' -d '{}' \
              "http://localhost/api/overlays/range/${RANGES}/delete" >/dev/null 2>&1 || true
         echo "Released overlay ranges for known fixtures."
     fi
