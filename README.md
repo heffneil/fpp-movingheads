@@ -1,5 +1,7 @@
 # fpp-movingheads
 
+<img width="1212" height="1093" alt="Screenshot 2026-08-19 at 11 05 12 AM" src="https://github.com/user-attachments/assets/21f4cac7-4125-441f-a0f4-7ae08337acc1" />
+
 Import xLights DMX moving-head models into FPP and drive one fixture live from a
 browser, to check it is addressed correctly and that every channel does what the
 model says it does.
