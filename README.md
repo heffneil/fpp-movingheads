@@ -1,7 +1,5 @@
 # fpp-movingheads
 
-<img width="1212" height="1093" alt="Screenshot 2026-08-19 at 11 05 12 AM" src="https://github.com/user-attachments/assets/21f4cac7-4125-441f-a0f4-7ae08337acc1" />
-
 Import xLights DMX moving-head models into FPP and drive one fixture live from a
 browser, to check it is addressed correctly and that every channel does what the
 model says it does.
@@ -10,6 +8,10 @@ A bench and setup tool, not a sequencing tool.
 
 Nothing is sent to a fixture until you press **Take control**; every control sits
 disabled behind a mask until then.
+
+<img width="1000" alt="The Moving Head Test page in control of a 16-channel fixture: the radar aim pad showing pan 2 degrees and tilt -5, Quick Commands with Lamp On and Lamp Off above the restrike cooldown warning, sliders for the dimmer, shutter and color wheel the model declares, labelled raw sliders for everything else, a live log of the overlay range requests being sent, and the lamp channel and values configured for the fixture." src="https://github.com/user-attachments/assets/21f4cac7-4125-441f-a0f4-7ae08337acc1" />
+
+*Driving a 16-channel moving head at DMX 109433. Hosted as a GitHub attachment rather than committed: FPP clones this repository onto the player, and there is no reason to ship a screenshot to every install.*
 
 ## What it gives you
 
