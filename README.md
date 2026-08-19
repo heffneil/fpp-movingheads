@@ -124,3 +124,15 @@ whole client path without hardware.
 - A channel attribute of `0` means unset in xLights, so such a channel becomes a
   raw slider even when its label says otherwise — `MH2-1` in one real show
   declares `DmxDimmerChannel="0"` while its label reads "Dimmer".
+
+## License
+
+Copyright (C) 2026 Neil Heuer.
+
+Released under the GNU General Public License, version 2 — the same license as
+Falcon Player itself. See [LICENSE](LICENSE).
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. It drives stage-lighting hardware: read the Safety notes in
+the plugin's own help page before pointing a fixture at anything.

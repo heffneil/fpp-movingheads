@@ -124,8 +124,12 @@
     <li>Requires FPP 10. The overlay range endpoint has not been verified on 9.x.</li>
   </ul>
 
-  <h3>Source</h3>
+  <h3>Source and license</h3>
   <p>
     <a href="https://github.com/heffneil/fpp-movingheads">github.com/heffneil/fpp-movingheads</a>
+  </p>
+  <p>
+    Copyright &copy; 2026 Neil Heuer. Released under the GNU General Public License, version 2
+    &mdash; the same license as Falcon Player itself. Distributed with no warranty of any kind.
   </p>
 </div>
