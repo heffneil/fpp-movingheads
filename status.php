@@ -355,6 +355,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
   <fieldset class="mhtFieldset" id="mhtLampControl" tabindex="-1">
     <legend>Lamp Control</legend>
     <p class="mhtNote">
+      Listed for each fixture this device can actually drive &mdash; a fixture with no address, or
+      one whose channels another instance emits, has nothing to strike, so it is not offered here.
       Which channel strikes and douses the lamp, and the two values that do it. Not in the
       model &mdash; xLights holds one fixed value per channel, not a selectable pair &mdash; and
       the values are fixture-specific, so they are entered here. Leave the channel blank to
@@ -362,7 +364,14 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       before setting these: striking a lamp takes time to restrike and costs lamp life, which is
       what the cooldown enforces.
     </p>
-    <?php foreach ($resolved as $f):
+    <?php if (!$ready): ?>
+      <p class="mhtNote mhtWarn">
+        No fixture has a usable DMX address yet, so there is nothing to configure a lamp channel
+        for. Give a fixture an address above &mdash; set its controller's base channel, or enter an
+        absolute one &mdash; and it will appear here.
+      </p>
+    <?php endif; ?>
+    <?php foreach ($ready as $f):
         $lamp = $f['lamp'] ?? null;
         // The channel number IS in the model - xLights labels it in NodeNames -
         // so it is offered rather than left for you to find in the raw list. Only

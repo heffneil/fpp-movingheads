@@ -71,9 +71,20 @@ class FixtureStore
         $replaced = 0;
         foreach ($incoming as $f) {
             if (isset($byName[$f['name']])) {
-                // preserve a manual override the user set on the old entry
-                if (isset($byName[$f['name']]['override'])) {
-                    $f['override'] = $byName[$f['name']]['override'];
+                $old = $byName[$f['name']];
+                // Carry across everything the user set by hand, because none of
+                // it is in the model file and re-importing must not silently
+                // undo it. Re-importing is routine - it is how you pick up an
+                // edit made in xLights - so losing this is losing real work.
+                if (isset($old['override'])) {
+                    $f['override'] = $old['override'];
+                }
+                // The lamp block especially: the channel is a guess the user
+                // confirmed, the values come off a DMX chart, and lastOffAt is a
+                // restrike cooldown in progress. Dropping that last one would
+                // re-enable Lamp On on a lamp that is still cooling.
+                if (isset($old['lamp'])) {
+                    $f['lamp'] = $old['lamp'];
                 }
                 $replaced++;
             } else {
