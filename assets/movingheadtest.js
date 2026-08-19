@@ -803,6 +803,16 @@ var MHT = (function () {
      * reasons.
      */
     function setControlsEnabled(on) {
+        // Show only the action that applies. Release does nothing when no ranges
+        // are held, and Take control does nothing while they are - offering both
+        // at once invites a click that is a no-op, and on a page whose whole
+        // point is knowing whether anything is being driven, the visible button
+        // should answer that on its own. Hidden rather than disabled: a disabled
+        // Release still reads as "there is something to release".
+        var take = $('mhtTake'), rel = $('mhtRelease');
+        if (take) { take.hidden = on; }
+        if (rel) { rel.hidden = !on; }
+
         var scopes = ['mhtSemantic', 'mhtRaw'];
         scopes.forEach(function (id) {
             var el = $(id);

@@ -260,7 +260,9 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <span class="mhtGrow"></span>
     <span id="mhtState" class="mhtPill mhtOff">Released</span>
     <button type="button" id="mhtTake" class="buttons">Take control</button>
-    <button type="button" id="mhtRelease" class="buttons">Release</button>
+    <!-- hidden in the markup, not just by JS: the page loads not-in-control, so
+         Release would otherwise be painted for one frame before init() hides it -->
+    <button type="button" id="mhtRelease" class="buttons" hidden>Release</button>
   </div>
 
   <div class="mhtStage">
