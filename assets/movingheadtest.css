@@ -197,3 +197,24 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 }
 
 .mhtPadCaption span { white-space: nowrap; }
+
+/* The note and the warning both point at the row where lamp values are typed.
+   Underlined rather than colored alone, so it reads as a link inside a line of
+   muted note text and inside the red warning without fighting either. */
+.mhtJumpLamp { color: inherit; text-decoration: underline; cursor: pointer; }
+.mhtJumpLamp:hover { text-decoration: none; }
+
+/* Which row was meant, when there are several. Fades rather than blinks: the
+   point is to draw the eye to a row that just scrolled into view. */
+@keyframes mhtLampFlash {
+  from { background: rgba(120, 170, 255, 0.30); }
+  to   { background: transparent; }
+}
+.mhtLampFlash {
+  animation: mhtLampFlash 1.6s ease-out;
+  border-radius: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mhtLampFlash { animation-duration: 0.01s; }
+}
