@@ -316,7 +316,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <div class="mhtLampWarn">
           Do not cycle the lamp repeatedly. After a Lamp Off the lamp must cool before it will
           strike again &mdash; forcing an early restrike shortens lamp life or simply fails.
-          Lamp On is held until the cooldown below has elapsed.
+          Lamp On is held until the
+          <a href="#mhtLampControl" class="mhtJumpLamp">cooldown</a> has elapsed.
         </div>
         <div class="mhtCooldown" id="mhtCooldown" hidden></div>
       </fieldset>
@@ -351,7 +352,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
 
   <?php endif; ?>
 
-  <fieldset class="mhtFieldset">
+  <fieldset class="mhtFieldset" id="mhtLampControl" tabindex="-1">
     <legend>Lamp Control</legend>
     <p class="mhtNote">
       Which channel strikes and douses the lamp, and the two values that do it. Not in the
@@ -377,7 +378,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             }
         }
     ?>
-      <form method="post" class="mhtLampRow">
+      <form method="post" class="mhtLampRow" data-lamp-row="1">
         <input type="hidden" name="mhtAction" value="lamp">
         <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
         <span class="mhtLampName"><?php echo htmlspecialchars($f['name']); ?></span>

@@ -822,10 +822,20 @@ var MHT = (function () {
         refreshLampButtons();
         var note = $('mhtLampNote');
         if (note) {
-            note.textContent = haveLamp
-                ? ('Lamp on channel ' + fx.lamp.channel + ': on = ' + fx.lamp.onValue +
-                   ', off = ' + fx.lamp.offValue)
-                : 'No lamp channel configured for this fixture - set one under Lamp Control below.';
+            // Built with DOM nodes rather than innerHTML: the only variable part
+            // is the fixture name, which is model-supplied text.
+            note.textContent = '';
+            if (haveLamp) {
+                note.appendChild(document.createTextNode(
+                    'Lamp on channel ' + fx.lamp.channel + ': on = ' + fx.lamp.onValue +
+                    ', off = ' + fx.lamp.offValue + ' - '));
+                note.appendChild(lampJumpLink('change it'));
+                note.appendChild(document.createTextNode('.'));
+            } else {
+                note.appendChild(document.createTextNode('No lamp channel configured for this fixture - '));
+                note.appendChild(lampJumpLink('set one under Lamp Control'));
+                note.appendChild(document.createTextNode('.'));
+            }
         }
         var pad = $('mhtRadar');
         if (pad) { pad.classList.toggle('mhtInert', !on); }
@@ -967,6 +977,95 @@ var MHT = (function () {
         return d.textContent || '';
     }
 
+    function lampJumpLink(text) {
+        var a = document.createElement('a');
+        a.href = '#mhtLampControl';
+        a.className = 'mhtJumpLamp';
+        a.textContent = text;
+        return a;
+    }
+
+    /**
+     * Find the Lamp Control row belonging to a fixture.
+     *
+     * Matched on the form's own hidden fixture field rather than by building an
+     * id or a selector out of the name - model names are free text and would
+     * need escaping to survive either.
+     */
+    function lampRowFor(name) {
+        var rows = document.querySelectorAll('form[data-lamp-row]');
+        for (var i = 0; i < rows.length; i++) {
+            var f = rows[i].querySelector('input[name="fixture"]');
+            if (f && f.value === name) { return rows[i]; }
+        }
+        return null;
+    }
+
+    /**
+     * Jump to where the lamp values are entered, for the fixture being driven.
+     *
+     * The plain href is a working anchor on its own, so this only has to improve
+     * on it: land on the right fixture's row rather than the top of the section,
+     * put the cursor in the Channel box ready to type, and flash the row so it is
+     * obvious which of several rows was meant.
+     */
+    function jumpToLamp(e) {
+        var row = fx ? lampRowFor(fx.name) : null;
+        var target = row || $('mhtLampControl');
+        if (!target) { return; }              // no section: let the href do its thing
+        if (e) { e.preventDefault(); }
+
+        scrollIntoViewSafely(target);
+        row = row || null;
+        var input = row ? row.querySelector('input[name="lampChannel"]') : null;
+        if (input) {
+            input.focus({ preventScroll: true });
+            input.select();
+        } else {
+            $('mhtLampControl').focus({ preventScroll: true });
+        }
+        if (row) {
+            row.classList.remove('mhtLampFlash');
+            // Reading offsetWidth restarts the animation when the link is
+            // clicked twice; without it the class is re-added in the same frame
+            // and nothing appears to happen the second time.
+            void row.offsetWidth;
+            row.classList.add('mhtLampFlash');
+            window.setTimeout(function () { row.classList.remove('mhtLampFlash'); }, 1600);
+        }
+    }
+
+    function inViewport(el) {
+        var r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= (window.innerHeight || 0);
+    }
+
+    /**
+     * Scroll an element into view, and make sure it actually happened.
+     *
+     * Smooth scrolling is not always honored - it is a silent no-op in some
+     * environments, and the user may have asked for reduced motion - and a jump
+     * link that quietly does nothing is the very problem this link exists to
+     * solve. So the smooth attempt is checked shortly afterwards and redone
+     * instantly if the page has not moved and the target is still off screen.
+     */
+    function scrollIntoViewSafely(target) {
+        var reduce = window.matchMedia &&
+                     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var y0 = window.scrollY;
+        try {
+            target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        } catch (e) {
+            target.scrollIntoView();   // ancient signature, no options object
+        }
+        if (reduce) { return; }
+        window.setTimeout(function () {
+            if (window.scrollY === y0 && !inViewport(target)) {
+                target.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }, 250);
+    }
+
     function showLampError(form, msg) {
         var el = form.querySelector('.mhtLampErr');
         if (!el) {
@@ -986,6 +1085,13 @@ var MHT = (function () {
         // back to a native POST exactly then - which reloads the page, which is
         // what "it doesn't take effect until I refresh" actually was.
         wireLampForm();
+
+        // Delegated so it covers the note's link, which is rebuilt on every
+        // setControlsEnabled(), as well as the static one in the warning text.
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest ? e.target.closest('.mhtJumpLamp') : null;
+            if (a) { jumpToLamp(e); }
+        });
 
         // Seeded and ticking before the tool-DOM guard: a cooling lamp is worth
         // reporting even on a page with nothing driveable.
