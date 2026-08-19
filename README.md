@@ -6,14 +6,24 @@ model says it does.
 
 A bench and setup tool, not a sequencing tool.
 
+Nothing is sent to a fixture until you press **Take control**; every control sits
+disabled behind a mask until then.
+
 ## What it gives you
 
-- **A radar pad** you drag to aim. Pan and tilt are written 16-bit across the
-  model's coarse and fine channels, applying its range of motion and reverse
-  flag. Horizontal/vertical by default; a checkbox switches to bearing/radius.
+- **A radar pad** you drag to aim, gridded in 45&deg; blocks. Pan and tilt are
+  written 16-bit across the model's coarse and fine channels, applying the range
+  of motion, home offset and reverse flag. The grid spans only the angles the
+  fixture can actually reach, which is not symmetric unless its home position
+  happens to sit mid-range.
 - **Controls the model actually declares** — dimmer, shutter, and the color
   wheel rendered as its own swatches with the DMX value behind each.
 - **Labelled raw sliders** for everything else, named from `NodeNames`.
+- **Lamp control**, once you tell it which channel strikes and douses the lamp
+  and with what values &mdash; the channel is suggested from the model's own
+  labels, the values come off your fixture's DMX chart. Commands are pulsed
+  rather than parked, and Lamp On is held for a configurable restrike cooldown
+  after a Lamp Off, recorded server-side so it survives a reload.
 - **Position-zone safety**, honored by default with a visible override.
 - **A request log**, so you can see the exact URLs being sent.
 
@@ -120,7 +130,9 @@ whole client path without hardware.
 - One fixture at a time, by design.
 - Color wheels are supported. RGB and CMY color models are parsed but have no
   dedicated control yet; their channels appear as raw sliders.
-- Positions are not saved or recalled.
+- Positions are remembered per fixture, in this browser only, so a reload reports
+  where the fixture actually is rather than claiming centre. They are not saved as
+  recallable presets, and another browser knows nothing about them.
 - A channel attribute of `0` means unset in xLights, so such a channel becomes a
   raw slider even when its label says otherwise — `MH2-1` in one real show
   declares `DmxDimmerChannel="0"` while its label reads "Dimmer".
