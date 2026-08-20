@@ -186,9 +186,36 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         These fixtures use a controller-relative <code>StartChannel</code> and no base is set
         for their controller yet. A relative address cannot be resolved from the model file
         alone &mdash; the absolute origin lives in the channel-output configuration of the FPP
-        instance that actually emits the channels. On that machine,
-        <code>Input/Output Setup &rarr; Other</code> shows the DMX output's start channel.
+        instance that actually emits the channels.
       </p>
+      <?php $dmxOuts = LocalOutputs::dmxOutputs(); if ($dmxOuts): ?>
+        <p class="mhtNote">
+          <?php if (count($dmxOuts) === 1): ?>
+            This device's DMX output starts at
+            <strong><?php echo (int) $dmxOuts[0]['start']; ?></strong>
+            (<?php echo htmlspecialchars($dmxOuts[0]['device']); ?>,
+            <?php echo htmlspecialchars($dmxOuts[0]['type']); ?>,
+            <?php echo (int) $dmxOuts[0]['count']; ?> channels), which is filled in below.
+            Check it is the right controller for the fixture before saving.
+          <?php else: ?>
+            This device has <?php echo count($dmxOuts); ?> enabled DMX outputs, so which one a
+            given fixture hangs off is not something this page can know &mdash; pick the matching
+            start channel:
+            <?php $bits = [];
+              foreach ($dmxOuts as $o) {
+                  $bits[] = htmlspecialchars($o['device'] . ' (' . $o['type'] . ') at ' . $o['start']
+                            . ', ' . $o['count'] . ' ch');
+              }
+              echo implode('; ', $bits); ?>.
+          <?php endif; ?>
+        </p>
+      <?php else: ?>
+        <p class="mhtNote">
+          No enabled DMX output was found in this device's channel-output configuration, so there
+          is no base channel to suggest. On the machine that emits these channels,
+          <code>Input/Output Setup &rarr; Other</code> shows the DMX output's start channel.
+        </p>
+      <?php endif; ?>
       <div class="table-responsive"><table class="mhtTable">
         <tr><th>Fixture</th><th>Controller</th><th>Offset</th><th>Base</th></tr>
         <?php foreach ($unresolved as $f): ?>
@@ -202,7 +229,10 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   <input type="hidden" name="mhtAction" value="base">
                   <input type="hidden" name="controller"
                          value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
-                  <input type="number" name="baseChannel" min="1" step="1" value="1" class="mhtNumWide" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+                  <?php $sug = LocalOutputs::suggestedBase(); ?>
+                  <input type="number" name="baseChannel" min="1" step="1"
+                         value="<?php echo $sug > 0 ? $sug : 1; ?>" class="mhtNumWide"
+                         autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
               <?php else: ?>
