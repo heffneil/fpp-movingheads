@@ -127,6 +127,12 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 /* A file input carries a wide intrinsic width and will not shrink on its own -
    the last thing pushing a 320px phone into horizontal page scroll. */
 .mhtImport input[type=file] { flex: 1 1 12ch; min-width: 0; max-width: 100%; }
+/* Own the horizontal scroll rather than relying on .table-responsive: FPP 10
+   defines it, but FPP 9.5's custom Bootstrap build does not ship the tables
+   utilities at all, so on 9.x the wrapper would be inert and a seven-column
+   table would take the page sideways again. Harmless where Bootstrap does
+   define it - same declaration. */
+.mhtFieldset .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .mhtTable { width: auto; font-size: 13px; }
 .mhtTable td, .mhtTable th { padding: 3px 12px 3px 0; text-align: left; font-weight: normal; }
 .mhtTable th { font-size: 11px; opacity: .6; }
