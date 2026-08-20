@@ -189,7 +189,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         instance that actually emits the channels. On that machine,
         <code>Input/Output Setup &rarr; Other</code> shows the DMX output's start channel.
       </p>
-      <table class="mhtTable">
+      <div class="table-responsive"><table class="mhtTable">
         <tr><th>Fixture</th><th>Controller</th><th>Offset</th><th>Base</th></tr>
         <?php foreach ($unresolved as $f): ?>
           <tr>
@@ -202,21 +202,21 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   <input type="hidden" name="mhtAction" value="base">
                   <input type="hidden" name="controller"
                          value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
-                  <input type="number" name="baseChannel" min="1" step="1" value="1" style="width:110px" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+                  <input type="number" name="baseChannel" min="1" step="1" value="1" class="mhtNumWide" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
               <?php else: ?>
                 <form method="post" style="display:inline-flex;gap:6px">
                   <input type="hidden" name="mhtAction" value="override">
                   <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
-                  <input type="number" name="absolute" min="1" step="1" placeholder="absolute" style="width:110px" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+                  <input type="number" name="absolute" min="1" step="1" placeholder="absolute" class="mhtNumWide" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
               <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
-      </table>
+      </table></div>
     </fieldset>
   <?php endif; ?>
 
@@ -229,7 +229,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         Writes to them would be accepted and silently do nothing, so they are not offered for
         control. Drive them from the instance that emits their channels, or correct the address.
       </p>
-      <table class="mhtTable">
+      <div class="table-responsive"><table class="mhtTable">
         <tr><th>Fixture</th><th>Channels</th><th>Ch</th></tr>
         <?php foreach ($notEmitted as $f): ?>
           <tr>
@@ -239,7 +239,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             <td><?php echo (int) $f['channelCount']; ?></td>
           </tr>
         <?php endforeach; ?>
-      </table>
+      </table></div>
     </fieldset>
   <?php endif; ?>
 
@@ -395,19 +395,19 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <span class="mhtLampName"><?php echo htmlspecialchars($f['name']); ?></span>
         <label>Channel</label>
         <input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
-               step="1" style="width:74px" placeholder="ch" required
+               step="1" class="mhtNum" placeholder="ch" required
                value="<?php echo $lamp ? (int) $lamp['channel'] : ($guess ?: ''); ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <label>On</label>
-        <input type="number" name="lampOn" min="0" max="255" step="1" style="width:70px"
+        <input type="number" name="lampOn" min="0" max="255" step="1" class="mhtNum"
                value="<?php echo $lamp ? (int) $lamp['onValue'] : ''; ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <label>Off</label>
-        <input type="number" name="lampOff" min="0" max="255" step="1" style="width:70px"
+        <input type="number" name="lampOff" min="0" max="255" step="1" class="mhtNum"
                value="<?php echo $lamp ? (int) $lamp['offValue'] : ''; ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <label title="Seconds the lamp must cool before it may be struck again. Set this from your fixture's manual.">Cooldown s</label>
-        <input type="number" name="lampCooldown" min="0" max="3600" step="10" style="width:74px"
+        <input type="number" name="lampCooldown" min="0" max="3600" step="10" class="mhtNum"
                value="<?php echo $lamp ? (int) ($lamp['cooldownSec'] ?? 300) : 300; ?>"
                autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
         <button type="submit" class="buttons">Save</button>
@@ -422,7 +422,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
 
   <fieldset class="mhtFieldset">
     <legend>Registered Fixtures</legend>
-    <table class="mhtTable">
+    <div class="table-responsive"><table class="mhtTable">
       <tr><th>Fixture</th><th>Type</th><th>Ch</th><th>Absolute</th><th>On the Wire</th><th>Source</th><th>Set Absolute</th><th></th></tr>
       <?php foreach ($resolved as $f): ?>
         <tr>
@@ -458,7 +458,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             <form method="post" style="display:inline-flex;gap:5px">
               <input type="hidden" name="mhtAction" value="override">
               <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
-              <input type="number" name="absolute" min="1" step="1" style="width:96px"
+              <input type="number" name="absolute" min="1" step="1" class="mhtNum"
                      placeholder="derived"
                      value="<?php echo isset($f['override']) ? (int) $f['override'] : ''; ?>"
                      title="Overrides the address derived from the model. Blank uses the derived one."
@@ -475,7 +475,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
           </td>
         </tr>
       <?php endforeach; ?>
-    </table>
+    </table></div>
   </fieldset>
 
   <script>window.MHT_FIXTURES = <?php echo json_encode($ready, JSON_UNESCAPED_SLASHES); ?>;</script>
