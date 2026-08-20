@@ -89,6 +89,78 @@ class LocalOutputs
         return false;
     }
 
+    /**
+     * DMX outputs this instance emits, read from its own channel-output config.
+     *
+     * A controller-relative StartChannel needs a base channel, and the plugin was
+     * telling people to go and find it: "Input/Output Setup -> Other shows the
+     * DMX output's start channel". That number is in a config file on this very
+     * machine, so read it and offer it instead of sending someone hunting.
+     *
+     * Only enabled outputs, and only DMX types - an E1.31 or pixel-string output
+     * start channel is not a DMX fixture's base and offering it would be worse
+     * than offering nothing.
+     *
+     * @return array<int,array{start:int,count:int,device:string,type:string}>
+     */
+    public static function dmxOutputs(): array
+    {
+        global $settings;
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        $cached = [];
+
+        $dir = $settings['configDirectory'] ?? '';
+        if ($dir === '') {
+            $media = $settings['mediaDirectory'] ?? '/home/fpp/media';
+            $dir = rtrim($media, '/') . '/config';
+        }
+        $file = rtrim($dir, '/') . '/co-other.json';
+        if (!is_readable($file)) {
+            return $cached;
+        }
+        $j = json_decode((string) @file_get_contents($file), true);
+        if (!is_array($j) || !isset($j['channelOutputs']) || !is_array($j['channelOutputs'])) {
+            return $cached;
+        }
+        foreach ($j['channelOutputs'] as $o) {
+            if (!is_array($o) || empty($o['enabled'])) {
+                continue;
+            }
+            $type = (string) ($o['type'] ?? '');
+            if (stripos($type, 'DMX') === false) {
+                continue;
+            }
+            $start = (int) ($o['startChannel'] ?? 0);
+            $count = (int) ($o['channelCount'] ?? 0);
+            if ($start < 1 || $count < 1) {
+                continue;
+            }
+            $cached[] = [
+                'start' => $start,
+                'count' => $count,
+                'device' => (string) ($o['device'] ?? ''),
+                'type' => $type,
+            ];
+        }
+        return $cached;
+    }
+
+    /**
+     * The single obvious base channel, or 0 when it is not obvious.
+     *
+     * One enabled DMX output means one candidate and it can be offered as a
+     * prefilled value. Several means guessing which one a given fixture hangs
+     * off, so they are listed for the user to choose from instead.
+     */
+    public static function suggestedBase(): int
+    {
+        $outs = self::dmxOutputs();
+        return count($outs) === 1 ? $outs[0]['start'] : 0;
+    }
+
     /** Human-readable ranges for a message, 1-indexed to match everything else. */
     public static function describe(): string
     {
