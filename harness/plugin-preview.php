@@ -102,10 +102,23 @@ if ($uri === '/reset') {
 
 // ---- wrap the page the way plugin.php does --------------------------------
 echo "<!DOCTYPE html><html><head><meta charset='utf-8'>";
+// FPP's real pages carry this; without it a narrow window still lays out at ~980px
+// and every responsive check silently passes.
+echo "<meta name='viewport' content='width=device-width, initial-scale=1'>";
 echo "<title>MHT plugin preview</title>";
-echo "<style>body{font:14px system-ui;margin:18px;background:#15161a;color:#e7e8ea}";
+// Real Bootstrap 5.3, because FPP serves it and the plugin's CSS now depends on
+// its theme variables and .table-responsive. Without it the harness silently
+// tested only the var() fallbacks, and every responsive check passed by default
+// because .table-responsive had no styles at all.
+// MHT_THEME=light|dark picks which theme to render; default dark.
+$theme = getenv('MHT_THEME') ?: 'dark';
+if (getenv('MHT_NO_BOOTSTRAP') !== '1') {
+    echo "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'>";
+    echo "<script>document.documentElement.setAttribute('data-bs-theme','" . htmlspecialchars($theme) . "');</script>";
+}
+echo "<style>body{font:14px system-ui;margin:18px}";
 echo "input,select,button{font:inherit}.alert{padding:7px 10px;border-radius:6px;margin:6px 0}";
-echo ".alert-info{background:#1d3a52}.alert-danger{background:#4a2020}";
+echo ".alert-info{background:var(--bs-info-bg-subtle)}.alert-danger{background:var(--bs-danger-bg-subtle)}";
 echo "h2,h3{font-weight:500}code,pre{font-family:ui-monospace,Menlo,monospace}</style>";
 
 // status.php inlines the plugin's own assets from assets/, so nothing to add
