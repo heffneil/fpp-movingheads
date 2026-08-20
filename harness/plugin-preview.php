@@ -88,6 +88,15 @@ if (str_starts_with($uri, '/api/')) {
     exit;
 }
 
+if ($uri === '/bootstrap.css') {
+    if (is_readable($WORK . '/bootstrap.min.css')) {
+        header('Content-Type: text/css');
+        readfile($WORK . '/bootstrap.min.css');
+    } else {
+        http_response_code(404);
+    }
+    exit;
+}
 if ($uri === '/requests') {
     header('Content-Type: text/plain');
     readfile($LOG);
@@ -106,14 +115,23 @@ echo "<!DOCTYPE html><html><head><meta charset='utf-8'>";
 // and every responsive check silently passes.
 echo "<meta name='viewport' content='width=device-width, initial-scale=1'>";
 echo "<title>MHT plugin preview</title>";
-// Real Bootstrap 5.3, because FPP serves it and the plugin's CSS now depends on
-// its theme variables and .table-responsive. Without it the harness silently
-// tested only the var() fallbacks, and every responsive check passed by default
-// because .table-responsive had no styles at all.
-// MHT_THEME=light|dark picks which theme to render; default dark.
+// Real Bootstrap, because FPP serves it and the plugin's CSS depends on its theme
+// variables and .table-responsive. Without it this harness silently tested only
+// the var() fallbacks, and every responsive check passed by default because
+// .table-responsive had no styles at all.
+//
+// Served from a local cache, never fetched from a CDN by this file. The plugin
+// must not depend on an external CDN - a show network is frequently offline, and
+// the plugin check rightly flags any CDN reference in shipped code. The one-time
+// download command is in harness/README.md, and the cache lives under
+// .preview-media/ which is gitignored, so nothing is committed or installed.
+// MHT_THEME=light|dark picks the theme; default dark. MHT_NO_BOOTSTRAP=1 skips it
+// to test the fallback colors deliberately.
 $theme = getenv('MHT_THEME') ?: 'dark';
-if (getenv('MHT_NO_BOOTSTRAP') !== '1') {
-    echo "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'>";
+$bsCache = $WORK . '/bootstrap.min.css';
+$useBs = getenv('MHT_NO_BOOTSTRAP') !== '1' && is_readable($bsCache);
+if ($useBs) {
+    echo "<link rel='stylesheet' href='/bootstrap.css'>";
     echo "<script>document.documentElement.setAttribute('data-bs-theme','" . htmlspecialchars($theme) . "');</script>";
 }
 echo "<style>body{font:14px system-ui;margin:18px}";
@@ -125,5 +143,11 @@ echo "h2,h3{font-weight:500}code,pre{font-family:ui-monospace,Menlo,monospace}</
 // here - plugin.php only auto-includes js/ and css/, which this plugin does not use.
 
 echo "</head><body>";
+if (!$useBs && getenv('MHT_NO_BOOTSTRAP') !== '1') {
+    echo "<div class='alert alert-danger'>No cached Bootstrap, so this page is "
+       . "rendering with the plugin's fallback colors only - theme and "
+       . "<code>.table-responsive</code> behaviour are NOT being tested. "
+       . "See <code>harness/README.md</code> for the one-line fetch.</div>";
+}
 include $ROOT . '/status.php';
 echo "</body></html>";
