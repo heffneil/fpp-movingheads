@@ -50,3 +50,40 @@ Then:
 `MHT_NO_BOOTSTRAP=1` renders without it on purpose, to check the fallback colors
 hold up on their own. Without a cached copy the page says so rather than looking
 fine while testing nothing.
+
+## Exercising the not-driveable path
+
+`LocalOutputs` asks FPP for the channels this instance actually emits, which on a
+real player is `http://localhost/api/system/info`. Port 80 on a dev machine is not
+FPP, so that call used to fail silently here and every fixture read as driveable —
+hiding the whole "Not Driveable From This Device" branch. It looked like a
+consequence of `php -S` being single-threaded; it was the port.
+
+Two things are needed, and both are just environment:
+
+    PHP_CLI_SERVER_WORKERS=4 \
+    MHT_API_BASE="http://127.0.0.1:8145" \
+    MHT_FAKE_RANGES="172287-172302" \
+    php -S 127.0.0.1:8145 -t harness harness/plugin-preview.php
+
+`MHT_API_BASE` points `LocalOutputs` at the harness instead of port 80.
+`PHP_CLI_SERVER_WORKERS` forks the built-in server so the page can fetch from the
+server rendering it. `MHT_FAKE_RANGES` is what the stand-in `/api/system/info`
+reports, **0-indexed** like the real one — `172287-172302` means channels
+172288–172303.
+
+Set a base that falls outside those ranges and the page shows the not-driveable
+panel with the derived-base fix; set one inside and the fixture becomes
+selectable.
+
+## Suggesting a base from local outputs
+
+Drop a `co-other.json` into `.preview-media/config/` to give the page a DMX output
+to derive a base from:
+
+    { "channelOutputs": [
+        { "channelCount": 16, "device": "DMX1", "enabled": 1,
+          "startChannel": 172288, "type": "DMX-Open" } ] }
+
+One enabled DMX output is prefilled and derived on load; two or more are listed
+without a guess.

@@ -228,7 +228,8 @@ class FixtureStore
      * Precedence: manual override, then an already-absolute StartChannel,
      * then controllerBase + offset - 1. Null when it cannot be determined.
      */
-    public static function absoluteStart(array $fixture, ?array $bases = null): ?int
+    public static function absoluteStart(array $fixture, ?array $bases = null,
+                                         int $derivedBase = 0): ?int
     {
         if (isset($fixture['override']) && (int) $fixture['override'] > 0) {
             return (int) $fixture['override'];
@@ -243,8 +244,38 @@ class FixtureStore
             if (isset($bases[$c]) && (int) $bases[$c] > 0) {
                 return (int) $bases[$c] + (int) $s['offset'] - 1;
             }
+            // Last resort: the start channel of this device's own DMX output.
+            // A controller's base channel IS that start channel, so when no base
+            // has been set the machine already knows the answer and there is no
+            // reason to make someone type it - importing a model before wiring up
+            // the output is the normal order of doing things, and this is what
+            // makes the fixture resolve on the next page load rather than staying
+            // stuck until somebody notices a form.
+            //
+            // Explicitly LAST: a base someone set by hand always wins, even when
+            // it disagrees with the local output. Overriding a deliberate value
+            // from a guess would be the worse failure - see the Not Driveable
+            // panel, which offers the derived value as a button instead.
+            if ($derivedBase > 0) {
+                return $derivedBase + (int) $s['offset'] - 1;
+            }
         }
         return null;
+    }
+
+    /** Did this fixture's address come from a derived base rather than a set one? */
+    public static function isDerived(array $fixture, ?array $bases = null): bool
+    {
+        if (isset($fixture['override']) && (int) $fixture['override'] > 0) {
+            return false;
+        }
+        $s = $fixture['start'] ?? [];
+        if (($s['mode'] ?? '') !== 'relative') {
+            return false;
+        }
+        $bases = $bases ?? self::bases();
+        $c = $s['controller'] ?? '';
+        return !(isset($bases[$c]) && (int) $bases[$c] > 0);
     }
 
     /** Controller names referenced by relative fixtures, for the bases form. */
