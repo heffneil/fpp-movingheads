@@ -254,3 +254,8 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
    100% so a narrow phone shrinks them instead of scrolling the page sideways. */
 .mhtNum { width: 8ch; max-width: 100%; }
 .mhtNumWide { width: 11ch; max-width: 100%; }
+
+/* The derived-base button sits next to the manual field, so it needs to read as
+   the shortcut rather than the primary control. */
+.mhtInlineFix { display: inline-flex; gap: 6px; align-items: center; margin-left: 6px; }
+.mhtInlineFix .mhtNote { margin: 0; white-space: nowrap; }

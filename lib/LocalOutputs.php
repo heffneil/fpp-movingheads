@@ -33,7 +33,13 @@ class LocalOutputs
         $cached = true;
 
         $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
-        $raw = @file_get_contents('http://localhost/api/system/info', false, $ctx);
+        // Always localhost:80 on a real player - FPP's own web server. The env
+        // override exists only so the off-device harness can serve a stand-in on
+        // another port; without it this call silently failed there (port 80 on a
+        // dev machine is not FPP), which is why the not-driveable path went
+        // untested for so long while appearing to be a threading limitation.
+        $base = getenv('MHT_API_BASE') ?: 'http://localhost';
+        $raw = @file_get_contents(rtrim($base, '/') . '/api/system/info', false, $ctx);
         if ($raw === false) {
             return $value = null;
         }

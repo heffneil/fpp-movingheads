@@ -124,14 +124,47 @@ if (!empty($_POST['mhtAjax'])) {
     return;
 }
 
+/**
+ * Would pointing this fixture's controller at the local DMX output actually make
+ * it driveable from here?
+ *
+ * A controller's base channel IS the start channel of the output that carries it,
+ * so the candidate is the same for every fixture on that controller; what differs
+ * is whether the fixture's own offset then lands inside the emitted range. Only
+ * offered when it does. Suggesting a "fix" that leaves the fixture exactly as
+ * undriveable is worse than saying nothing, because it looks like the answer.
+ *
+ * Relative addresses only. An absolute address carries no offset to reason with,
+ * so there is nothing to derive - that one stays a manual correction.
+ */
+function mhtBaseFix(array $f, int $suggested): ?int
+{
+    if ($suggested <= 0 || ($f['start']['mode'] ?? '') !== 'relative') {
+        return null;
+    }
+    $offset = (int) ($f['start']['offset'] ?? 1);
+    $abs = $suggested + $offset - 1;
+    if ($abs < 1) {
+        return null;
+    }
+    return LocalOutputs::covers($abs, (int) $f['channelCount']) === true ? $suggested : null;
+}
+
 $bases = FixtureStore::bases();
 $fixtures = FixtureStore::fixtures();
 
 // Resolve each fixture's absolute start once, here, so the client never has to
 // know about controller bases or the two StartChannel forms.
+// Derived on load, not written to config: a page render must not mutate settings,
+// and a value inferred from the machine should not masquerade as one somebody
+// chose. It resolves the fixture immediately and the Source column says where it
+// came from, with a Save so it can be made explicit.
+$derivedBase = LocalOutputs::suggestedBase();
+
 $resolved = [];
 foreach ($fixtures as $f) {
-    $f['absoluteStart'] = FixtureStore::absoluteStart($f, $bases);
+    $f['absoluteStart'] = FixtureStore::absoluteStart($f, $bases, $derivedBase);
+    $f['derivedBase'] = FixtureStore::isDerived($f, $bases) && $f['absoluteStart'] !== null;
     // null means we could not ask this instance; that is not a fault, so the UI
     // stays quiet rather than crying wolf.
     $f['cooldownRemaining'] = FixtureStore::cooldownRemaining($f);
@@ -235,6 +268,15 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                          autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
+                <?php $fix = mhtBaseFix($f, LocalOutputs::suggestedBase()); if ($fix): ?>
+                  <form method="post" class="mhtInlineFix">
+                    <input type="hidden" name="mhtAction" value="base">
+                    <input type="hidden" name="controller"
+                           value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
+                    <input type="hidden" name="baseChannel" value="<?php echo $fix; ?>">
+                    <button type="submit" class="buttons">Use <?php echo $fix; ?></button>
+                  </form>
+                <?php endif; ?>
               <?php else: ?>
                 <form method="post" style="display:inline-flex;gap:6px">
                   <input type="hidden" name="mhtAction" value="override">
@@ -258,15 +300,32 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         FPP instance actually puts on the wire (<?php echo htmlspecialchars(LocalOutputs::describe()); ?>).
         Writes to them would be accepted and silently do nothing, so they are not offered for
         control. Drive them from the instance that emits their channels, or correct the address.
+        A base channel set before this device's outputs existed lands here &mdash; where one can
+        be derived from a local DMX output, it is offered per fixture below.
       </p>
       <div class="table-responsive"><table class="mhtTable">
-        <tr><th>Fixture</th><th>Channels</th><th>Ch</th></tr>
+        <tr><th>Fixture</th><th>Channels</th><th>Ch</th><th>Fix</th></tr>
         <?php foreach ($notEmitted as $f): ?>
           <tr>
             <td><?php echo htmlspecialchars($f['name']); ?></td>
             <td class="mhtWarn"><?php echo (int) $f['absoluteStart']; ?>&ndash;<?php
                 echo (int) $f['absoluteStart'] + (int) $f['channelCount'] - 1; ?></td>
             <td><?php echo (int) $f['channelCount']; ?></td>
+            <td>
+              <?php $fix = mhtBaseFix($f, LocalOutputs::suggestedBase());
+                    if ($fix): $newAbs = $fix + (int) ($f['start']['offset'] ?? 1) - 1; ?>
+                <form method="post" class="mhtInlineFix">
+                  <input type="hidden" name="mhtAction" value="base">
+                  <input type="hidden" name="controller"
+                         value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
+                  <input type="hidden" name="baseChannel" value="<?php echo $fix; ?>">
+                  <button type="submit" class="buttons">Set base <?php echo $fix; ?></button>
+                  <span class="mhtNote">&rarr; <?php echo $newAbs; ?></span>
+                </form>
+              <?php else: ?>
+                <span class="mhtNote">&mdash;</span>
+              <?php endif; ?>
+            </td>
           </tr>
         <?php endforeach; ?>
       </table></div>
@@ -479,6 +538,18 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                 echo 'absolute in model';
             } elseif (($f['start']['mode'] ?? '') === 'relative') {
                 echo htmlspecialchars($f['start']['controller']) . ' + ' . (int) $f['start']['offset'];
+                if (!empty($f['derivedBase'])) {
+                    // Derived, not stored. Say so plainly and offer to make it
+                    // explicit, so nobody has to wonder whether it survived.
+                    echo '<br><span class="mhtWarn">base derived from this device\'s DMX output ('
+                       . (int) $derivedBase . '), not saved</span> ';
+                    echo '<form method="post" class="mhtInlineFix">'
+                       . '<input type="hidden" name="mhtAction" value="base">'
+                       . '<input type="hidden" name="controller" value="'
+                       . htmlspecialchars($f['start']['controller']) . '">'
+                       . '<input type="hidden" name="baseChannel" value="' . (int) $derivedBase . '">'
+                       . '<button type="submit" class="buttons">Save it</button></form>';
+                }
             } else {
                 echo 'unknown';
             }
