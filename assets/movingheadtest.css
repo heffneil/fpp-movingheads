@@ -19,7 +19,11 @@
    radar on a narrow screen - which matters, since aiming a head from a phone
    in the yard is a real use of this page. */
 .mhtCol { flex: 1 1 340px; min-width: 0; }
-#mhtRadarWrap { flex: 0 0 auto; }
+/* Allowed to shrink (0 1 auto, min-width 0), not fixed at its content width.
+   With flex:0 0 auto the wrapper was always exactly as wide as the pad, so the
+   pad's own max-width:100% resolved against itself and never constrained
+   anything - the page just scrolled sideways instead. */
+#mhtRadarWrap { flex: 0 1 auto; min-width: 0; }
 
 .mhtBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .mhtBar .mhtGrow { flex: 1; }
@@ -120,6 +124,9 @@ input.mhtBig { -moz-appearance: textfield; appearance: textfield; }
 #mhtLog { font-family: monospace; font-size: 11px; opacity: .75; max-height: 150px; overflow: auto; white-space: pre-wrap; margin: 0; }
 
 .mhtImport { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* A file input carries a wide intrinsic width and will not shrink on its own -
+   the last thing pushing a 320px phone into horizontal page scroll. */
+.mhtImport input[type=file] { flex: 1 1 12ch; min-width: 0; max-width: 100%; }
 .mhtTable { width: auto; font-size: 13px; }
 .mhtTable td, .mhtTable th { padding: 3px 12px 3px 0; text-align: left; font-weight: normal; }
 .mhtTable th { font-size: 11px; opacity: .6; }
