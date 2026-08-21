@@ -61,10 +61,15 @@ class LocalOutputs
                 $spans[] = [$a, $b];
             }
         }
-        // "0-0" is what an instance with nothing configured reports; treat it as
-        // no usable information rather than as an empty output set.
-        if (!$spans || ($spans === [[0, 0]])) {
-            return $value = null;
+        // An empty list is NOT the same as not knowing. "0-0", or an empty
+        // channelRanges, is a definite answer: this instance emits nothing. It
+        // used to be folded in with "could not ask" and returned null, which made
+        // every fixture read as driveable on an instance whose outputs had just
+        // been deleted - the exact silent-write failure this class exists to
+        // prevent, produced by the class itself. Only an unanswerable question
+        // returns null now; a clear "nothing" returns [].
+        if ($spans === [[0, 0]]) {
+            $spans = [];
         }
         return $value = $spans;
     }
@@ -173,6 +178,9 @@ class LocalOutputs
         $spans = self::ranges();
         if ($spans === null) {
             return 'unknown';
+        }
+        if ($spans === []) {
+            return 'none - this instance has no channel outputs configured';
         }
         $out = [];
         foreach ($spans as $s) {
