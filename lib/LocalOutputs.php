@@ -19,6 +19,32 @@
 class LocalOutputs
 {
     /**
+     * GET one of FPP's documented API endpoints, decoded, or null.
+     *
+     * Everything here goes through the HTTP API rather than FPP's config files.
+     * Guideline 3.4 is explicit that the on-disk formats are internal and can
+     * change at any release, while the API is the maintained contract - and it
+     * also reflects live state that fppd may not have flushed yet, which matters
+     * for exactly the case this class serves: outputs that were just changed.
+     *
+     * Always localhost:80 on a real player - FPP's own web server. The env
+     * override exists only so the off-device harness can serve a stand-in on
+     * another port; without it these calls silently failed there (port 80 on a
+     * dev machine is not FPP), which is why the not-driveable path went untested
+     * for so long while appearing to be a threading limitation.
+     */
+    private static function apiGet(string $path)
+    {
+        $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
+        $base = getenv('MHT_API_BASE') ?: 'http://localhost';
+        $raw = @file_get_contents(rtrim($base, '/') . $path, false, $ctx);
+        if ($raw === false) {
+            return null;
+        }
+        return json_decode($raw, true);
+    }
+
+    /**
      * @return array|null List of [start0, end0] spans, or null when the
      *                    instance could not be asked - in which case callers
      *                    must not warn, since unknown is not the same as bad.
@@ -32,18 +58,7 @@ class LocalOutputs
         }
         $cached = true;
 
-        $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]);
-        // Always localhost:80 on a real player - FPP's own web server. The env
-        // override exists only so the off-device harness can serve a stand-in on
-        // another port; without it this call silently failed there (port 80 on a
-        // dev machine is not FPP), which is why the not-driveable path went
-        // untested for so long while appearing to be a threading limitation.
-        $base = getenv('MHT_API_BASE') ?: 'http://localhost';
-        $raw = @file_get_contents(rtrim($base, '/') . '/api/system/info', false, $ctx);
-        if ($raw === false) {
-            return $value = null;
-        }
-        $j = json_decode($raw, true);
+        $j = self::apiGet('/api/system/info');
         if (!is_array($j) || !isset($j['channelRanges'])) {
             return $value = null;
         }
@@ -116,23 +131,15 @@ class LocalOutputs
      */
     public static function dmxOutputs(): array
     {
-        global $settings;
         static $cached = null;
         if ($cached !== null) {
             return $cached;
         }
         $cached = [];
 
-        $dir = $settings['configDirectory'] ?? '';
-        if ($dir === '') {
-            $media = $settings['mediaDirectory'] ?? '/home/fpp/media';
-            $dir = rtrim($media, '/') . '/config';
-        }
-        $file = rtrim($dir, '/') . '/co-other.json';
-        if (!is_readable($file)) {
-            return $cached;
-        }
-        $j = json_decode((string) @file_get_contents($file), true);
+        // co-other is where FPP keeps the non-pixel outputs, DMX among them.
+        // Read through the documented endpoint, not config/co-other.json.
+        $j = self::apiGet('/api/channel/output/co-other');
         if (!is_array($j) || !isset($j['channelOutputs']) || !is_array($j['channelOutputs'])) {
             return $cached;
         }

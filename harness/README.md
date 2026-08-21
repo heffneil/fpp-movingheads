@@ -78,8 +78,11 @@ selectable.
 
 ## Suggesting a base from local outputs
 
-Drop a `co-other.json` into `.preview-media/config/` to give the page a DMX output
-to derive a base from:
+Drop a `dmx-outputs.json` into `.preview-media/` to give the page a DMX output to
+derive a base from. The harness serves it as
+`GET /api/channel/output/co-other`, which is the documented endpoint the plugin
+reads; the plugin never opens FPP's config files itself, so neither does its
+stand-in data get named after one:
 
     { "channelOutputs": [
         { "channelCount": 16, "device": "DMX1", "enabled": 1,

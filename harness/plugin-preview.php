@@ -81,6 +81,19 @@ if ($uri === '/api/system/info') {
     exit;
 }
 
+// Stand in for the channel-output endpoint the base derivation reads.
+//
+// Its canned response lives in .preview-media/dmx-outputs.json - the harness's
+// own fixture data, deliberately NOT named after FPP's config file. The plugin
+// reads this only through the API, per guideline 3.4, and nothing in the repo
+// should even look like it opens FPP's internals.
+if ($uri === '/api/channel/output/co-other') {
+    header('Content-Type: application/json');
+    $f = $WORK . '/dmx-outputs.json';
+    echo is_readable($f) ? (string) file_get_contents($f) : json_encode(['channelOutputs' => []]);
+    exit;
+}
+
 if (str_starts_with($uri, '/api/')) {
     file_put_contents($LOG, $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . "\n", FILE_APPEND);
     header('Content-Type: application/json');
