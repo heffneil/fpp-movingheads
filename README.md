@@ -143,7 +143,7 @@ whole client path without hardware.
 
 ## License
 
-Copyright (C) 2026 Neil Heuer.
+Copyright (C) 2026 heffneil.
 
 Released under the GNU General Public License, version 2 — the same license as
 Falcon Player itself. See [LICENSE](LICENSE).

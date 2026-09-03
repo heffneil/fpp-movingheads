@@ -129,7 +129,7 @@
     <a href="https://github.com/heffneil/fpp-movingheads">github.com/heffneil/fpp-movingheads</a>
   </p>
   <p>
-    Copyright &copy; 2026 Neil Heuer. Released under the GNU General Public License, version 2
+    Copyright &copy; 2026 heffneil. Released under the GNU General Public License, version 2
     &mdash; the same license as Falcon Player itself. Distributed with no warranty of any kind.
   </p>
 </div>
