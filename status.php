@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($res['fixtures']) {
                 $r = FixtureStore::merge($res['fixtures']);
                 $notices[] = sprintf('Imported %s: %d new, %d updated.',
-                    htmlspecialchars($up['name']), $r['added'], $r['replaced']);
+                    htmlspecialchars($up['name'], ENT_QUOTES), $r['added'], $r['replaced']);
             }
         }
     } elseif ($action === 'base') {
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $b = (int) ($_POST['baseChannel'] ?? 0);
         if ($c !== '' && $b > 0) {
             FixtureStore::setBase($c, $b);
-            $notices[] = 'Base channel for ' . htmlspecialchars($c) . ' set to ' . $b . '.';
+            $notices[] = 'Base channel for ' . htmlspecialchars($c, ENT_QUOTES) . ' set to ' . $b . '.';
         } else {
             $problems[] = 'A base channel must be 1 or greater.';
         }
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $n = (string) ($_POST['fixture'] ?? '');
         $v = trim((string) ($_POST['absolute'] ?? ''));
         FixtureStore::setOverride($n, $v === '' ? null : max(1, (int) $v));
-        $notices[] = 'Override updated for ' . htmlspecialchars($n) . '.';
+        $notices[] = 'Override updated for ' . htmlspecialchars($n, ENT_QUOTES) . '.';
     } elseif ($action === 'lamp') {
         $n = (string) ($_POST['fixture'] ?? '');
         $ch = trim((string) ($_POST['lampChannel'] ?? ''));
@@ -74,12 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // someone filling the row in and missing a box, and silently storing
         // "no lamp" while reporting success is how that goes unnoticed.
         if ($ch === '' && ($onRaw !== '' || $offRaw !== '')) {
-            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n)
+            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n, ENT_QUOTES)
                 . ': a channel number is required. Clear the On and Off values too if you '
                 . 'meant to remove lamp control.';
             $lampFailed = true;
         } elseif ($ch !== '' && $onRaw === '' && $offRaw === '') {
-            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n)
+            $problems[] = 'Lamp not saved for ' . htmlspecialchars($n, ENT_QUOTES)
                 . ': channel ' . (int) $ch . ' needs both an On and an Off value.';
             $lampFailed = true;
         }
@@ -92,8 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 isset($_POST['lampCooldown']) ? (int) $_POST['lampCooldown'] : null
             );
             $notices[] = $ch === ''
-                ? 'Lamp control cleared for ' . htmlspecialchars($n) . '.'
-                : 'Lamp control for ' . htmlspecialchars($n) . ' set to channel ' . (int) $ch . '.';
+                ? 'Lamp control cleared for ' . htmlspecialchars($n, ENT_QUOTES) . '.'
+                : 'Lamp control for ' . htmlspecialchars($n, ENT_QUOTES) . ' set to channel ' . (int) $ch . '.';
         }
     } elseif ($action === 'lampoff') {
         // Client tells us the lamp was just doused so the restrike cooldown is
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'remove') {
         $n = (string) ($_POST['fixture'] ?? '');
         FixtureStore::remove($n);
-        $notices[] = 'Removed ' . htmlspecialchars($n) . '.';
+        $notices[] = 'Removed ' . htmlspecialchars($n, ENT_QUOTES) . '.';
     }
 }
 
@@ -116,11 +116,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // so headers are long gone and a Content-Type of application/json is not
 // available. The client pulls the marker out of the text it gets back.
 if (!empty($_POST['mhtAjax'])) {
+    // Same reasoning as the fixtures blob, plus one specific to this wrapper: a
+    // fixture name containing --> would otherwise end the HTML comment early and
+    // spill the rest of the payload into the document as markup. JSON_HEX_TAG
+    // escapes the > so the sequence cannot form.
     echo "\n<!--MHT-RESULT:" . json_encode([
         'ok' => empty($problems),
         'problems' => array_map('html_entity_decode', $problems),
         'notices' => array_map('html_entity_decode', $notices),
-    ]) . "-->\n";
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . "-->\n";
     return;
 }
 
@@ -198,7 +202,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <div class="alert alert-info"><?php echo $n; ?></div>
   <?php endforeach; ?>
   <?php foreach ($problems as $p): ?>
-    <div class="alert alert-danger"><?php echo htmlspecialchars($p); ?></div>
+    <div class="alert alert-danger"><?php echo htmlspecialchars($p, ENT_QUOTES); ?></div>
   <?php endforeach; ?>
 
   <fieldset class="mhtFieldset">
@@ -226,8 +230,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
           <?php if (count($dmxOuts) === 1): ?>
             This device's DMX output starts at
             <strong><?php echo (int) $dmxOuts[0]['start']; ?></strong>
-            (<?php echo htmlspecialchars($dmxOuts[0]['device']); ?>,
-            <?php echo htmlspecialchars($dmxOuts[0]['type']); ?>,
+            (<?php echo htmlspecialchars($dmxOuts[0]['device'], ENT_QUOTES); ?>,
+            <?php echo htmlspecialchars($dmxOuts[0]['type'], ENT_QUOTES); ?>,
             <?php echo (int) $dmxOuts[0]['count']; ?> channels), which is filled in below.
             Check it is the right controller for the fixture before saving.
           <?php else: ?>
@@ -237,7 +241,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             <?php $bits = [];
               foreach ($dmxOuts as $o) {
                   $bits[] = htmlspecialchars($o['device'] . ' (' . $o['type'] . ') at ' . $o['start']
-                            . ', ' . $o['count'] . ' ch');
+                            . ', ' . $o['count'] . ' ch', ENT_QUOTES);
               }
               echo implode('; ', $bits); ?>.
           <?php endif; ?>
@@ -253,15 +257,15 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <tr><th>Fixture</th><th>Controller</th><th>Offset</th><th>Base</th></tr>
         <?php foreach ($unresolved as $f): ?>
           <tr>
-            <td><?php echo htmlspecialchars($f['name']); ?></td>
-            <td><?php echo htmlspecialchars($f['start']['controller'] ?? '(unknown form)'); ?></td>
+            <td><?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?></td>
+            <td><?php echo htmlspecialchars($f['start']['controller'] ?? '(unknown form)', ENT_QUOTES); ?></td>
             <td><?php echo (int) ($f['start']['offset'] ?? 0); ?></td>
             <td>
               <?php if (($f['start']['mode'] ?? '') === 'relative'): ?>
                 <form method="post" style="display:inline-flex;gap:6px">
                   <input type="hidden" name="mhtAction" value="base">
                   <input type="hidden" name="controller"
-                         value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
+                         value="<?php echo htmlspecialchars($f['start']['controller'], ENT_QUOTES); ?>">
                   <?php $sug = LocalOutputs::suggestedBase(); ?>
                   <input type="number" name="baseChannel" min="1" step="1"
                          value="<?php echo $sug > 0 ? $sug : 1; ?>" class="mhtNumWide"
@@ -272,7 +276,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                   <form method="post" class="mhtInlineFix">
                     <input type="hidden" name="mhtAction" value="base">
                     <input type="hidden" name="controller"
-                           value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
+                           value="<?php echo htmlspecialchars($f['start']['controller'], ENT_QUOTES); ?>">
                     <input type="hidden" name="baseChannel" value="<?php echo $fix; ?>">
                     <button type="submit" class="buttons">Use <?php echo $fix; ?></button>
                   </form>
@@ -280,7 +284,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
               <?php else: ?>
                 <form method="post" style="display:inline-flex;gap:6px">
                   <input type="hidden" name="mhtAction" value="override">
-                  <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+                  <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>">
                   <input type="number" name="absolute" min="1" step="1" placeholder="absolute" class="mhtNumWide" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
                   <button type="submit" class="buttons">Set</button>
                 </form>
@@ -297,7 +301,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       <legend>Not Driveable From This Device</legend>
       <p class="mhtNote">
         These fixtures have a valid absolute address, but it falls outside the channels this
-        FPP instance actually puts on the wire (<?php echo htmlspecialchars(LocalOutputs::describe()); ?>).
+        FPP instance actually puts on the wire (<?php echo htmlspecialchars(LocalOutputs::describe(), ENT_QUOTES); ?>).
         Writes to them would be accepted and silently do nothing, so they are not offered for
         control. Drive them from the instance that emits their channels, or correct the address.
         A base channel set before this device's outputs existed lands here &mdash; where one can
@@ -307,7 +311,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <tr><th>Fixture</th><th>Channels</th><th>Ch</th><th>Fix</th></tr>
         <?php foreach ($notEmitted as $f): ?>
           <tr>
-            <td><?php echo htmlspecialchars($f['name']); ?></td>
+            <td><?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?></td>
             <td class="mhtWarn"><?php echo (int) $f['absoluteStart']; ?>&ndash;<?php
                 echo (int) $f['absoluteStart'] + (int) $f['channelCount'] - 1; ?></td>
             <td><?php echo (int) $f['channelCount']; ?></td>
@@ -317,7 +321,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                 <form method="post" class="mhtInlineFix">
                   <input type="hidden" name="mhtAction" value="base">
                   <input type="hidden" name="controller"
-                         value="<?php echo htmlspecialchars($f['start']['controller']); ?>">
+                         value="<?php echo htmlspecialchars($f['start']['controller'], ENT_QUOTES); ?>">
                   <input type="hidden" name="baseChannel" value="<?php echo $fix; ?>">
                   <button type="submit" class="buttons">Set base <?php echo $fix; ?></button>
                   <span class="mhtNote">&rarr; <?php echo $newAbs; ?></span>
@@ -340,8 +344,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     <label for="mhtFixture" style="margin:0">Fixture</label>
     <select id="mhtFixture">
       <?php foreach ($ready as $f): ?>
-        <option value="<?php echo htmlspecialchars($f['name']); ?>">
-          <?php echo htmlspecialchars($f['name'] . '  (' . $f['channelCount'] . ' ch)'); ?>
+        <option value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>">
+          <?php echo htmlspecialchars($f['name'] . '  (' . $f['channelCount'] . ' ch)', ENT_QUOTES); ?>
         </option>
       <?php endforeach; ?>
     </select>
@@ -480,8 +484,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     ?>
       <form method="post" class="mhtLampRow" data-lamp-row="1">
         <input type="hidden" name="mhtAction" value="lamp">
-        <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
-        <span class="mhtLampName"><?php echo htmlspecialchars($f['name']); ?></span>
+        <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>">
+        <span class="mhtLampName"><?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?></span>
         <label>Channel</label>
         <input type="number" name="lampChannel" min="1" max="<?php echo (int) $f['channelCount']; ?>"
                step="1" class="mhtNum" placeholder="ch" required
@@ -502,7 +506,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
         <button type="submit" class="buttons">Save</button>
         <?php if (!$lamp && $guess): ?>
           <span class="mhtNote mhtLampHint">ch <?php echo $guess; ?> is labelled
-            &ldquo;<?php echo htmlspecialchars($guessLabel); ?>&rdquo; in the model</span>
+            &ldquo;<?php echo htmlspecialchars($guessLabel, ENT_QUOTES); ?>&rdquo; in the model</span>
         <?php endif; ?>
         <span class="mhtNote mhtLampSaved" hidden>Saved</span>
       </form>
@@ -515,8 +519,8 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
       <tr><th>Fixture</th><th>Type</th><th>Ch</th><th>Absolute</th><th>On the Wire</th><th>Source</th><th>Set Absolute</th><th></th></tr>
       <?php foreach ($resolved as $f): ?>
         <tr>
-          <td><?php echo htmlspecialchars($f['name']); ?></td>
-          <td><?php echo htmlspecialchars($f['type']); ?></td>
+          <td><?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?></td>
+          <td><?php echo htmlspecialchars($f['type'], ENT_QUOTES); ?></td>
           <td><?php echo (int) $f['channelCount']; ?></td>
           <td><?php echo $f['absoluteStart'] ? (int) $f['absoluteStart'] : '<span class="mhtWarn">unresolved</span>'; ?></td>
           <td class="mhtNote">
@@ -537,7 +541,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             } elseif (($f['start']['mode'] ?? '') === 'absolute') {
                 echo 'absolute in model';
             } elseif (($f['start']['mode'] ?? '') === 'relative') {
-                echo htmlspecialchars($f['start']['controller']) . ' + ' . (int) $f['start']['offset'];
+                echo htmlspecialchars($f['start']['controller'], ENT_QUOTES) . ' + ' . (int) $f['start']['offset'];
                 if (!empty($f['derivedBase'])) {
                     // Derived, not stored. Say so plainly and offer to make it
                     // explicit, so nobody has to wonder whether it survived.
@@ -546,7 +550,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
                     echo '<form method="post" class="mhtInlineFix">'
                        . '<input type="hidden" name="mhtAction" value="base">'
                        . '<input type="hidden" name="controller" value="'
-                       . htmlspecialchars($f['start']['controller']) . '">'
+                       . htmlspecialchars($f['start']['controller'], ENT_QUOTES) . '">'
                        . '<input type="hidden" name="baseChannel" value="' . (int) $derivedBase . '">'
                        . '<button type="submit" class="buttons">Save it</button></form>';
                 }
@@ -558,7 +562,7 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
           <td>
             <form method="post" style="display:inline-flex;gap:5px">
               <input type="hidden" name="mhtAction" value="override">
-              <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+              <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>">
               <input type="number" name="absolute" min="1" step="1" class="mhtNum"
                      placeholder="derived"
                      value="<?php echo isset($f['override']) ? (int) $f['override'] : ''; ?>"
@@ -568,9 +572,14 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
             </form>
           </td>
           <td>
-            <form method="post" onsubmit="return confirm('Remove <?php echo htmlspecialchars($f['name']); ?>?')">
+            <?php /* The name goes in a data attribute, not inside a JS string
+                     literal: a name containing an apostrophe would otherwise
+                     close the string and the rest would be evaluated. Read back
+                     through dataset, which is plain text and cannot be code. */ ?>
+            <form method="post" data-fixture="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>"
+                  onsubmit="return confirm('Remove ' + this.dataset.fixture + '?')">
               <input type="hidden" name="mhtAction" value="remove">
-              <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name']); ?>">
+              <input type="hidden" name="fixture" value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES); ?>">
               <button type="submit" class="buttons">Remove</button>
             </form>
           </td>
@@ -579,6 +588,17 @@ $unresolved = array_values(array_filter($resolved, function ($f) {
     </table></div>
   </fieldset>
 
-  <script>window.MHT_FIXTURES = <?php echo json_encode($ready, JSON_UNESCAPED_SLASHES); ?>;</script>
+  <?php
+  /**
+   * Model-supplied text - fixture names, channel labels, colour names - is
+   * attacker-controlled: importing files other people made is what this plugin
+   * is for. JSON_UNESCAPED_SLASHES was actively harmful here, because it let a
+   * name containing </script> close this block and run as markup. The HEX flags
+   * escape < > & ' " to \uXXXX, so nothing in the data can terminate the script
+   * element or break an attribute, whatever the value.
+   */
+  $mhtJsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+  ?>
+  <script>window.MHT_FIXTURES = <?php echo json_encode($ready, $mhtJsonFlags); ?>;</script>
   <script><?php readfile(__DIR__ . '/assets/movingheadtest.js'); ?></script>
 </div>

@@ -50,8 +50,24 @@ var MHT = (function () {
     // Password managers latch onto bare number inputs and pop their autofill UI
     // over a field that is just a DMX value. Each vendor honors its own opt-out;
     // autocomplete="off" alone does not stop 1Password.
-    var PM_OPTOUT = 'autocomplete="off" data-1p-ignore data-lpignore="true" ' +
-                    'data-bwignore data-form-type="other"';
+    var PM_OPTOUT = {
+        'autocomplete': 'off',
+        'data-1p-ignore': '',
+        'data-lpignore': 'true',
+        'data-bwignore': '',
+        'data-form-type': 'other'
+    };
+
+    // Applied to a node rather than concatenated into markup: row() builds its
+    // inputs with createElement now, and reintroducing an attribute string would
+    // reintroduce the injection it was rewritten to avoid.
+    function applyPmOptOut(el) {
+        for (var k in PM_OPTOUT) {
+            if (Object.prototype.hasOwnProperty.call(PM_OPTOUT, k)) {
+                el.setAttribute(k, PM_OPTOUT[k]);
+            }
+        }
+    }
 
     function $(id) { return document.getElementById(id); }
 
@@ -658,13 +674,35 @@ var MHT = (function () {
     function row(chAbs, label, value, max, onInput, muted) {
         var d = document.createElement('div');
         d.className = 'mhtRow';
-        d.innerHTML = '<span class="mhtCh">' + chAbs + '</span>' +
-            '<label title="' + label + '"' + (muted ? ' class="mhtMuted"' : '') + '>' + label + '</label>' +
-            '<input type="range" min="0" max="' + max + '" step="1" value="' + value + '">' +
-            '<input type="number" class="mhtVal" min="0" max="' + max + '" step="1" value="' + value + '"' +
-            ' ' + PM_OPTOUT + '>';
-        var slider = d.querySelector('input[type=range]');
-        var num = d.querySelector('input[type=number]');
+
+        // Built from DOM nodes, not an innerHTML string. `label` comes from the
+        // model's NodeNames, which is text somebody else wrote: interpolated, it
+        // both closed the title="" attribute and injected tags as element
+        // content. textContent and setAttribute cannot express markup, so the
+        // label is inert whatever it contains.
+        var ch = document.createElement('span');
+        ch.className = 'mhtCh';
+        ch.textContent = chAbs;
+
+        var lab = document.createElement('label');
+        lab.textContent = label;
+        lab.setAttribute('title', label);
+        if (muted) { lab.className = 'mhtMuted'; }
+
+        var slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = 0; slider.max = max; slider.step = 1; slider.value = value;
+
+        var num = document.createElement('input');
+        num.type = 'number';
+        num.className = 'mhtVal';
+        num.min = 0; num.max = max; num.step = 1; num.value = value;
+        applyPmOptOut(num);
+
+        d.appendChild(ch);
+        d.appendChild(lab);
+        d.appendChild(slider);
+        d.appendChild(num);
         bindPair(slider, num, max, onInput);
         return d;
     }
@@ -745,7 +783,11 @@ var MHT = (function () {
             fx.colorWheel.positions.forEach(function (p) {
                 var b = document.createElement('button');
                 b.type = 'button';
-                b.style.background = p.hex;
+                // From the model's DmxColorWheelColorN attribute. Assigning
+                // arbitrary text to style is a CSS injection sink, so only an
+                // actual hex colour is honoured; anything else stays unset
+                // rather than being handed to the parser.
+                b.style.background = /^#[0-9a-fA-F]{3,8}$/.test(String(p.hex)) ? p.hex : '';
                 b.title = 'DMX ' + p.dmx;
                 b.addEventListener('click', function () {
                     vals[fx.colorWheel.channel] = p.dmx;
@@ -920,7 +962,7 @@ var MHT = (function () {
                         // stored nothing looks identical to one that worked.
                         if (!res.ok) {
                             (res.problems || ['Lamp config not saved']).forEach(function (m) {
-                                log('FAIL ' + stripTags(m));
+                                log('FAIL ' + asText(m));
                             });
                             showLampError(form, (res.problems || [])[0] || 'Not saved');
                             return;
@@ -979,12 +1021,14 @@ var MHT = (function () {
         }
     }
 
-    // Server messages are built for HTML (names are escaped there); the log is a
-    // text node, so undo that rather than showing &amp; to the user.
-    function stripTags(m) {
-        var d = document.createElement('div');
-        d.innerHTML = m;
-        return d.textContent || '';
+    // Server messages arrive already decoded (the marker payload runs them through
+    // html_entity_decode), so nothing needs un-escaping here - and the previous
+    // implementation did it by assigning attacker-influenced text to innerHTML,
+    // which is a markup parse on a string derived from a fixture name. Every
+    // caller writes the result to textContent, so a plain string is all that is
+    // wanted; this only guards the type.
+    function asText(m) {
+        return m == null ? '' : String(m);
     }
 
     function lampJumpLink(text) {
@@ -1084,7 +1128,7 @@ var MHT = (function () {
             form.appendChild(el);
         }
         el.hidden = !msg;
-        el.textContent = msg ? stripTags(msg) : '';
+        el.textContent = msg ? asText(msg) : '';
     }
 
     function init() {
