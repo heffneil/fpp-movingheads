@@ -8,6 +8,16 @@
 	"bugURL": "https://github.com/heffneil/fpp-movingheads/issues",
 	"iconURL": "https://raw.githubusercontent.com/heffneil/fpp-movingheads/master/icon.png",
 	"allowUpdates": 1,
+	"privacy": {
+		"summary": "Nothing leaves your device. Fixtures you import from xLights and the DMX values you set stay on the FPP box, written through FPP's own overlay API.",
+		"sends": [],
+		"collects": [],
+		"sensors": [],
+		"remoteAccess": "none",
+		"systemChanges": [],
+		"closedCode": false,
+		"other": "Imported fixtures are kept in <mediadir>/plugindata/fpp-movingheads and are deliberately left there on uninstall so a reinstall does not lose them. Delete that directory to remove them."
+	},
 	"versions": [
 		{
 			"minFPPVersion": "10.0",
