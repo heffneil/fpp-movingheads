@@ -390,7 +390,7 @@ var MHT = (function () {
     // the transition, and a lamp/reset channel's value ranges usually mean
     // something different when held. So the value is pulsed and then released
     // back to idle rather than left sitting on the channel.
-    var LAMP_PULSE_MS = 5000;
+    var LAMP_PULSE_MS = 12000;
     var LAMP_IDLE = 0;
     var lampTimer = null;
 

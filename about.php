@@ -57,7 +57,7 @@
         exact positioning.</li>
     <li><strong>Quick Commands</strong> &mdash; <em>Lamp On/Off</em> strikes or douses the arc
         lamp, using the channel and values you configure under Lamp Control. These are
-        <strong>momentary</strong>: the value is held for about five seconds and the channel then
+        <strong>momentary</strong>: the value is held for about twelve seconds and the channel then
         returns to 0. A lamp strike latches on the transition, and a lamp/reset channel's value
         ranges usually mean something different when held, so the command is pulsed rather than
         parked. Both buttons are disabled during a pulse so two commands cannot overlap, and
