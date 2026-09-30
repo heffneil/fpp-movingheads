@@ -7,8 +7,14 @@
  * and it must be testable without a device or a running fppd.
  *
  * Accepts either shape:
- *   - an exported .xmodel   (<models type="exported"><model .../></models>)
+ *   - an exported .xmodel, whose root is named for the model type rather than
+ *     being <model>: xLights writes <dmxmodel>, and also <dmxgeneral> and
+ *     <dmxservo>, for the fixtures we care about
  *   - a whole xlights_rgbeffects.xml (every <model> anywhere in the tree)
+ *
+ * So the search keys off the attribute that actually decides it, DisplayAs,
+ * rather than the element name - which matches every shape above, and any
+ * export root xLights adds later, without listing them.
  */
 
 class XmodelParser
@@ -32,7 +38,7 @@ class XmodelParser
         }
 
         $fixtures = [];
-        foreach ($doc->xpath('//model') as $m) {
+        foreach ($doc->xpath('//*[@DisplayAs]') as $m) {
             $displayAs = (string) ($m['DisplayAs'] ?? '');
             if (stripos($displayAs, 'Dmx') === false) {
                 continue; // not a DMX fixture, nothing for us to drive
